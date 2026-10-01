@@ -15,6 +15,8 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesManagement.Postgres", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesManagement.DbTests", "SalesManagement.DbTests\SalesManagement.DbTests.csproj", "{B334E83F-CC43-4856-93AE-0E613A14C2C7}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SalesManagement.Setup", "SalesManagement.Setup\SalesManagement.Setup.csproj", "{D7972836-89D8-47F9-9BC4-3A517F5B4364}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -97,6 +99,18 @@ Global
 		{B334E83F-CC43-4856-93AE-0E613A14C2C7}.Release|x64.Build.0 = Release|Any CPU
 		{B334E83F-CC43-4856-93AE-0E613A14C2C7}.Release|x86.ActiveCfg = Release|Any CPU
 		{B334E83F-CC43-4856-93AE-0E613A14C2C7}.Release|x86.Build.0 = Release|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Debug|x64.ActiveCfg = Debug|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Debug|x64.Build.0 = Debug|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Debug|x86.ActiveCfg = Debug|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Debug|x86.Build.0 = Debug|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Release|x64.ActiveCfg = Release|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Release|x64.Build.0 = Release|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Release|x86.ActiveCfg = Release|Any CPU
+		{D7972836-89D8-47F9-9BC4-3A517F5B4364}.Release|x86.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
