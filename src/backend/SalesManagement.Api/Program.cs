@@ -1,10 +1,13 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using SalesManagement.Core.Admin;
+using SalesManagement.Core.Audit;
 using SalesManagement.Api.Endpoints;
 using SalesManagement.Core.Auth;
 using SalesManagement.Core.Customers;
 using SalesManagement.Core.Dashboard;
 using SalesManagement.Core.Exceptions;
+using SalesManagement.Core.Imports;
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Prices;
 using SalesManagement.Core.Products;
@@ -15,6 +18,8 @@ using SalesManagement.Core.Targets;
 using SalesManagement.InMemory.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
 
 builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
 builder.Services.AddSingleton<ICustomerRepository, InMemoryCustomerRepository>();
@@ -32,7 +37,10 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PriceService>();
-builder.Services.AddScoped<ShipmentService>();
+builder.Services.AddSingleton<ShipmentService>();
+builder.Services.AddSingleton<AuditService>();
+builder.Services.AddSingleton<AdminUserService>();
+builder.Services.AddSingleton<ExcelImportService>();
 builder.Services.AddScoped<RateService>();
 builder.Services.AddScoped<TargetService>();
 builder.Services.AddScoped<DashboardService>();
@@ -52,6 +60,7 @@ app.Use(async (context, next) =>
     try { await next(); }
     catch (ForbiddenException exception) { context.Response.StatusCode = StatusCodes.Status403Forbidden; await context.Response.WriteAsJsonAsync(new { title = exception.Message, status = 403 }); }
     catch (PricePeriodConflictException exception) { context.Response.StatusCode = StatusCodes.Status409Conflict; await context.Response.WriteAsJsonAsync(new { title = exception.Message, status = 409 }); }
+    catch (InvalidImportBatchException exception) { context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity; await context.Response.WriteAsJsonAsync(new { title = exception.Message, status = 422 }); }
     catch (ConcurrencyException exception) { context.Response.StatusCode = StatusCodes.Status409Conflict; await context.Response.WriteAsJsonAsync(new { title = "다른 사용자가 먼저 수정했습니다.", status = 409, detail = exception.Message }); }
 });
 app.UseAuthentication();
@@ -62,6 +71,8 @@ app.MapMasterDataEndpoints();
 app.MapShipmentEndpoints();
 app.MapRateTargetEndpoints();
 app.MapDashboardEndpoints();
+app.MapImportEndpoints();
+app.MapAdminEndpoints();
 app.Run();
 
 public partial class Program;
