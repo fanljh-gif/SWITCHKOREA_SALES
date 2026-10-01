@@ -5,6 +5,7 @@ import type {
   DashboardSummary,
   ImportRequest,
   ImportValidation,
+  LoginRequest,
   ListQuery,
   MonthlyRate,
   Price,
@@ -18,6 +19,11 @@ type Create<T> = Omit<T, 'id' | 'version'>
 type Update<T> = Partial<Create<T>> & { version: number }
 
 export interface SalesApi {
+  getCurrentUser(): Promise<User | null>
+  login(input: LoginRequest): Promise<{ user: User; passwordChangeRequired: boolean }>
+  logout(): Promise<void>
+  changePassword(currentPassword: string, newPassword: string): Promise<void>
+
   listUsers(query?: ListQuery): Promise<User[]>
   getUser(id: string): Promise<User>
   createUser(input: Create<User>): Promise<User>

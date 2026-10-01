@@ -6,6 +6,7 @@ import type {
   DashboardSummary,
   ImportRequest,
   ImportValidation,
+  LoginRequest,
   ListQuery,
   MonthlyRate,
   Price,
@@ -16,6 +17,25 @@ import type {
 } from './contracts'
 
 export class MockSalesApi implements SalesApi {
+  private currentUser: User | null
+
+  constructor(options: { currentUser?: User | null } = {}) {
+    this.currentUser = options.currentUser ?? null
+  }
+
+  async getCurrentUser(): Promise<User | null> { return this.currentUser }
+  async login(input: LoginRequest): Promise<{ user: User; passwordChangeRequired: boolean }> {
+    if (!input.loginId || !input.password) throw new Error('아이디와 비밀번호를 확인해 주세요.')
+    if (!this.currentUser || this.currentUser.loginId !== input.loginId) throw new Error('아이디 또는 비밀번호가 올바르지 않습니다.')
+    if (this.currentUser.lockedUntil) throw new Error(`계정이 ${this.currentUser.lockedUntil}까지 잠겼습니다.`)
+    return { user: this.currentUser, passwordChangeRequired: Boolean(this.currentUser.passwordChangeRequired) }
+  }
+  async logout(): Promise<void> { this.currentUser = null }
+  async changePassword(_currentPassword: string, newPassword: string): Promise<void> {
+    if (newPassword.length < 8) throw new Error('새 비밀번호는 8자 이상이어야 합니다.')
+    if (this.currentUser) this.currentUser = { ...this.currentUser, passwordChangeRequired: false }
+  }
+
   async listUsers(_query?: ListQuery): Promise<User[]> { return [] }
   async getUser(_id: string): Promise<User> { throw new Error('User not found') }
   async createUser(input: Omit<User, 'id' | 'version'>): Promise<User> { return { ...input, id: crypto.randomUUID() } }

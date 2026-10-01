@@ -2,6 +2,9 @@ import { createContext, useContext, type ReactNode } from 'react'
 import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
 
 import type { SalesApi } from '../shared/api/SalesApi'
+import { ChangePasswordPage } from '../features/auth/ChangePasswordPage'
+import { LoginPage } from '../features/auth/LoginPage'
+import { AuthSessionProvider } from './AuthSession'
 
 const SalesApiContext = createContext<SalesApi | null>(null)
 
@@ -28,19 +31,22 @@ function Page({ children }: { children: ReactNode }) {
 export function App({ api }: { api: SalesApi }) {
   return (
     <SalesApiContext.Provider value={api}>
-      <BrowserRouter>
-        <header>스위치코리아 (SWITCH KOREA)</header>
-        <nav aria-label="주 메뉴">
-          {navigation.map(({ path, label }) => <Link key={path} to={path}>{label}</Link>)}
-        </nav>
-        <main>
-          <Routes>
-            <Route path="/login" element={<Page>로그인</Page>} />
-            {navigation.map(({ path, label }) => <Route key={path} path={path} element={<Page>{label}</Page>} />)}
-            <Route path="*" element={<Navigate replace to="/dashboard" />} />
-          </Routes>
-        </main>
-      </BrowserRouter>
+      <AuthSessionProvider api={api}>
+        <BrowserRouter>
+          <header>스위치코리아 (SWITCH KOREA)</header>
+          <nav aria-label="주 메뉴">
+            {navigation.map(({ path, label }) => <Link key={path} to={path}>{label}</Link>)}
+          </nav>
+          <main>
+            <Routes>
+              <Route path="/login" element={<LoginPage />} />
+              <Route path="/change-password" element={<ChangePasswordPage />} />
+              {navigation.map(({ path, label }) => <Route key={path} path={path} element={<Page>{label}</Page>} />)}
+              <Route path="*" element={<Navigate replace to="/dashboard" />} />
+            </Routes>
+          </main>
+        </BrowserRouter>
+      </AuthSessionProvider>
     </SalesApiContext.Provider>
   )
 }

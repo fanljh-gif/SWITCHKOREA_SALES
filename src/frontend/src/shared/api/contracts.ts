@@ -10,6 +10,18 @@ export interface User {
   email: string
   role: Role
   status: ActiveStatus
+  passwordChangeRequired?: boolean
+  lockedUntil?: string
+}
+
+export interface LoginRequest {
+  loginId: string
+  password: string
+}
+
+export interface AuthResult {
+  user: User
+  passwordChangeRequired: boolean
 }
 
 export interface Customer {

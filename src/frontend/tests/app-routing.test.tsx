@@ -14,9 +14,10 @@ const approvedRoutes = [
   '시스템 관리',
 ]
 
-it('renders all seven approved navigation routes', () => {
+it('renders all seven approved navigation routes', async () => {
   render(<App api={new MockSalesApi()} />)
 
+  expect(await screen.findByRole('heading', { name: '대시보드' })).toBeVisible()
   for (const routeName of approvedRoutes) {
     expect(screen.getByRole('link', { name: routeName })).toBeVisible()
   }
