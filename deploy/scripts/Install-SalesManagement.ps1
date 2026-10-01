@@ -1,31 +1,54 @@
 [CmdletBinding(SupportsShouldProcess, ConfirmImpact = 'High')]
 param(
     [Parameter(Mandatory)] [string] $SourceRoot,
-    [Parameter(Mandatory)] [string] $InstallPath,
-    [Parameter(Mandatory)] [string] $HostName,
+    [string] $InstallPath = 'C:\SwitchKorea\SalesManagement',
+    [string] $HostName = 'sales.switchkorea.local',
+    [Parameter(Mandatory)] [string] $ServerIp,
     [Parameter(Mandatory)] [string] $IntranetCidr,
+    [Parameter(Mandatory)] [string] $CertificateThumbprint,
     [string] $SiteName = 'SwitchKorea-Sales',
     [string] $AppPoolName = 'SwitchKorea-Sales',
-    [int] $Port = 80,
-    [string] $CertificateThumbprint
+    [switch] $PlanOnly
 )
 
 $ErrorActionPreference = 'Stop'
-if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw '관리자 권한 PowerShell이 필요합니다.' }
-if (-not (Test-Path -LiteralPath $SourceRoot -PathType Container)) { throw "소스 폴더가 없습니다: $SourceRoot" }
-if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('ConnectionStrings__SalesManagement', 'Machine'))) { throw 'Machine 환경변수 ConnectionStrings__SalesManagement를 먼저 보호된 방식으로 설정하세요.' }
-if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw '.NET Hosting Bundle 또는 SDK가 필요합니다.' }
-if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) { throw 'Front-end 빌드를 위한 pnpm이 필요합니다.' }
 
-$frontend = Join-Path $SourceRoot 'src\frontend'
-$backend = Join-Path $SourceRoot 'src\backend\SalesManagement.Api\SalesManagement.Api.csproj'
-$publish = Join-Path $SourceRoot 'artifacts\publish'
-if ($PSCmdlet.ShouldProcess($SiteName, '빌드하고 IIS 사이트를 설치 또는 갱신')) {
+if ($PlanOnly) {
+    @(
+        "Validate JHLEE, IPv4 $ServerIp, CIDR $IntranetCidr, disk, IIS, and restart state",
+        'Build React and publish ASP.NET Core API',
+        "Deploy to $InstallPath",
+        "Bind HTTP 80 and HTTPS 443 for $HostName using certificate $CertificateThumbprint",
+        "Allow TCP 80 and 443 only from $IntranetCidr",
+        'Do not create a PostgreSQL 5432 firewall rule'
+    ) | ForEach-Object { Write-Host "PLAN: $_" }
+    return
+}
+
+$principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Administrator elevation is required.' }
+if (-not (Test-Path -LiteralPath $SourceRoot -PathType Container)) { throw "SourceRoot not found: $SourceRoot" }
+if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('ConnectionStrings__SalesManagement', 'Machine'))) { throw 'Protected Machine connection setting is required.' }
+if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('SWITCHKOREA_DATA_PROTECTION_PATH', 'Machine'))) { throw 'Machine data-protection path setting is required.' }
+$certificate = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
+if (-not $certificate.HasPrivateKey) { throw 'The server certificate private key is unavailable.' }
+
+& (Join-Path $PSScriptRoot 'Test-LocalDeploymentPrerequisites.ps1') -ServerIp $ServerIp -IntranetCidr $IntranetCidr | Out-Null
+if (-not (Get-Command dotnet -ErrorAction SilentlyContinue)) { throw '.NET Hosting Bundle or SDK is required.' }
+if (-not (Get-Command pnpm -ErrorAction SilentlyContinue)) { throw 'pnpm is required for the front-end build.' }
+
+if ($PSCmdlet.ShouldProcess($SiteName, 'Build and configure the IIS site')) {
+    Enable-WindowsOptionalFeature -Online -FeatureName IIS-WebServerRole,IIS-WebServer,IIS-CommonHttpFeatures,IIS-StaticContent,IIS-DefaultDocument,IIS-HttpRedirect,IIS-ManagementConsole -All -NoRestart | Out-Null
+
+    $frontend = Join-Path $SourceRoot 'src\frontend'
+    $backend = Join-Path $SourceRoot 'src\backend\SalesManagement.Api\SalesManagement.Api.csproj'
+    $publish = Join-Path $SourceRoot 'artifacts\publish'
     & pnpm --dir $frontend build
-    if ($LASTEXITCODE -ne 0) { throw 'Front-end 빌드 실패' }
+    if ($LASTEXITCODE -ne 0) { throw 'Front-end build failed.' }
     & dotnet publish $backend -c Release -o $publish
-    if ($LASTEXITCODE -ne 0) { throw 'Back-end publish 실패' }
-    $wwwroot = Join-Path $publish 'wwwroot'; New-Item -ItemType Directory -Path $wwwroot -Force | Out-Null
+    if ($LASTEXITCODE -ne 0) { throw 'Back-end publish failed.' }
+    $wwwroot = Join-Path $publish 'wwwroot'
+    New-Item -ItemType Directory -Path $wwwroot -Force | Out-Null
     Copy-Item -Path (Join-Path $frontend 'dist\*') -Destination $wwwroot -Recurse -Force
     Copy-Item -LiteralPath (Join-Path $SourceRoot 'deploy\iis\web.config') -Destination (Join-Path $publish 'web.config') -Force
 
@@ -36,13 +59,21 @@ if ($PSCmdlet.ShouldProcess($SiteName, '빌드하고 IIS 사이트를 설치 또
     if (-not (Test-Path "IIS:\AppPools\$AppPoolName")) { New-WebAppPool -Name $AppPoolName | Out-Null }
     Set-ItemProperty "IIS:\AppPools\$AppPoolName" -Name managedRuntimeVersion -Value ''
     Set-ItemProperty "IIS:\AppPools\$AppPoolName" -Name startMode -Value 'AlwaysRunning'
-    if (-not (Test-Path "IIS:\Sites\$SiteName")) { New-Website -Name $SiteName -PhysicalPath $InstallPath -Port $Port -HostHeader $HostName -ApplicationPool $AppPoolName | Out-Null }
-    if ($CertificateThumbprint) {
-        New-WebBinding -Name $SiteName -Protocol https -Port 443 -HostHeader $HostName -SslFlags 1 -ErrorAction SilentlyContinue
-        Push-Location IIS:\SslBindings; try { Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" | New-Item "0.0.0.0!443!$HostName" -Force | Out-Null } finally { Pop-Location }
+    Set-ItemProperty "IIS:\AppPools\$AppPoolName" -Name autoStart -Value $true
+    if (-not (Test-Path "IIS:\Sites\$SiteName")) {
+        New-Website -Name $SiteName -PhysicalPath $InstallPath -Port 80 -HostHeader $HostName -ApplicationPool $AppPoolName | Out-Null
     }
-    Get-NetFirewallRule -DisplayName "$SiteName Intranet" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
-    $firewallPort = if ($CertificateThumbprint) { 443 } else { $Port }
-    New-NetFirewallRule -DisplayName "$SiteName Intranet" -Direction Inbound -Action Allow -Protocol TCP -LocalPort $firewallPort -RemoteAddress $IntranetCidr | Out-Null
+    Set-ItemProperty "IIS:\Sites\$SiteName" -Name applicationDefaults.preloadEnabled -Value $true
+    if (-not (Get-WebBinding -Name $SiteName -Protocol https -Port 443 -HostHeader $HostName -ErrorAction SilentlyContinue)) {
+        New-WebBinding -Name $SiteName -Protocol https -Port 443 -HostHeader $HostName -SslFlags 1 | Out-Null
+    }
+    Push-Location IIS:\SslBindings
+    try { Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" | New-Item "0.0.0.0!443!$HostName" -Force | Out-Null }
+    finally { Pop-Location }
+
+    Get-NetFirewallRule -DisplayName "$SiteName HTTP Intranet" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    Get-NetFirewallRule -DisplayName "$SiteName HTTPS Intranet" -ErrorAction SilentlyContinue | Remove-NetFirewallRule
+    New-NetFirewallRule -DisplayName "$SiteName HTTP Intranet" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 80 -RemoteAddress $IntranetCidr | Out-Null
+    New-NetFirewallRule -DisplayName "$SiteName HTTPS Intranet" -Direction Inbound -Action Allow -Protocol TCP -LocalPort 443 -RemoteAddress $IntranetCidr | Out-Null
     Start-Website -Name $SiteName
 }

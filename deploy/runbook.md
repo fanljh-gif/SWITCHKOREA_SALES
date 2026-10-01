@@ -1,55 +1,82 @@
 # SWITCH KOREA 영업관리 시스템 운영 인수서
 
-## 1. 운영 전 확정값
+## 1. 확정 구성
 
-배포 전 다음 값을 확정하고 변경관리 기록에 남긴다.
+- 서버: `JHLEE`
+- 서비스 주소: `https://sales.switchkorea.local`
+- 설치 위치: `C:\SwitchKorea\SalesManagement`
+- 공개 루트 인증서: `C:\SwitchKorea\Certificates\SwitchKorea-RootCA.cer`
+- 초기 자격증명: `C:\SwitchKorea\Secrets\initial-credentials.txt`
+- 데이터보호 키: `C:\SwitchKorea\DataProtectionKeys`
+- 백업: `C:\SwitchKorea\Backups`, 매일 02:00, 30일 보관
 
-- 사내 DNS 이름: `미확정`
-- 허용 사내망 CIDR: `미확정`
-- TLS 인증서와 갱신 담당자: `미확정`
-- PostgreSQL 서버·데이터베이스·운영 계정: `미확정`
-- 일별 공시환율 제공처와 수집 시각: `미확정`
-- 백업 폴더·별도 저장장치·보관일수: `미확정`
-- 장애 연락 담당자와 연락처: `미확정`
+연결 문자열과 비밀번호는 문서·Git·일반 로그에 기록하지 않는다. PostgreSQL은 localhost에서만 수신하고 외부 5432 방화벽 규칙을 만들지 않는다.
 
-비밀번호와 연결 문자열은 문서나 Git에 기록하지 않는다. IIS 서버의 보호된 Machine 환경변수 `ConnectionStrings__SalesManagement`로 제공한다.
+## 2. HTTPS 및 IIS 준비
 
-## 2. 설치
+1. 관리자 PowerShell에서 실제 서버 IPv4와 사내망 CIDR로 사전 점검한다.
 
-1. Windows Server에 IIS와 ASP.NET Core Hosting Bundle, PostgreSQL client, .NET SDK, Node.js/pnpm을 준비한다.
-2. TLS 인증서를 LocalMachine/My 저장소에 설치한다.
-3. 관리자 PowerShell에서 보호된 연결 문자열과 `PGPASSWORD`를 작업 시점에만 설정한다.
-4. `Install-SalesManagement.ps1`을 `SourceRoot`, `InstallPath`, `HostName`, `IntranetCidr`와 함께 실행한다. TLS를 사용할 때 `CertificateThumbprint`를 지정한다.
-5. `Migrations/InitialCreate.sql`을 검토 후 운영 DB에 적용한다.
-6. `/health`와 로그인 화면을 확인하고 방화벽이 지정 CIDR 이외 접근을 차단하는지 확인한다.
+   ```powershell
+   .\deploy\scripts\Test-LocalDeploymentPrerequisites.ps1 -ServerIp 192.0.2.10 -IntranetCidr 192.0.2.0/24
+   ```
 
-## 3. 초기 사용자와 일상 점검
+   위 주소는 문서 예시다. 실제 설치에는 `-DiscoverNetwork` 결과를 검토한 뒤 고정 IP 또는 DHCP 예약 주소를 사용한다.
 
-- 최초 팀장 계정은 운영 승인자가 일회성 초기 비밀번호로 생성하고 즉시 변경한다.
-- 매일 09:10에 USD/CNY 일별환율 수집 상태와 마지막 성공값을 확인한다.
-- IIS 로그, Windows 응용프로그램 로그, PostgreSQL 로그에서 오류를 확인한다.
-- 사용자 중지, 역할 변경, 환율·목표·단가·출고 변경은 감사 이력과 대조한다.
+2. 루트 CA와 서버 인증서를 만들거나 유효한 기존 인증서를 재사용한다.
 
-## 4. 백업
+   ```powershell
+   .\deploy\scripts\New-SwitchKoreaCertificate.ps1 -ServerIp <실제-IP>
+   ```
 
-- 작업 스케줄러에서 `Backup-SalesDatabase.ps1`을 매일 실행한다.
-- 백업은 날짜별 custom-format 파일이며 스크립트 실패 종료코드를 모니터링한다.
-- 최소 월 1회 별도 저장장치 복사본을 확인하고, 분기 1회 검증 DB로 복원 연습한다.
+3. `ConnectionStrings__SalesManagement`와 `SWITCHKOREA_DATA_PROTECTION_PATH`를 Machine 범위의 보호된 설치 단계에서 설정한다. 연결 문자열은 명령 이력에 직접 입력하지 않는다.
+4. 설치 계획을 먼저 확인하고 동일 인자로 실제 설치한다.
 
-## 5. 복원 연습과 장애 대응
+   ```powershell
+   .\deploy\scripts\Install-SalesManagement.ps1 -SourceRoot <저장소> -ServerIp <실제-IP> -IntranetCidr <실제-CIDR> -CertificateThumbprint <서버-인증서-지문> -PlanOnly
+   ```
 
-1. 운영 DB가 아닌 별도 검증 DB를 만든다.
-2. `Restore-SalesDatabase.ps1`을 실행하고 PowerShell 확인 질문에서 대상 서버·DB를 재확인한다.
-3. 사용자·거래처·출고·감사 이력 건수를 백업 원본과 비교한다.
-4. 장애 시 IIS 앱 풀 → `/health` → 연결 문자열 존재 여부 → PostgreSQL 연결/용량 → 최근 migration → 최근 백업 순으로 점검한다.
-5. 운영 복원은 서비스 중지, 변경 승인, 복원 대상 시각 확정 후에만 수행한다.
+IIS 앱 풀은 AlwaysRunning이며, HTTP 80은 ASP.NET Core의 HTTPS 전환 경로로만 사용한다. 방화벽은 지정 CIDR에서 들어오는 80/443만 허용한다.
 
-## 6. 배포 체크리스트
+## 3. 담당자 PC 설정
 
-- Front-end 테스트·빌드 통과
-- Back-end 및 DB 테스트 통과
-- migration SQL 검토
-- 임시 IIS 사이트 동일 출처 `/api` 확인
-- CIDR 외 접근 차단 확인
-- 백업 생성 및 별도 검증 DB 복원 건수 일치
-- 팀장 최종 승인과 배포 시각 기록
+1. `SwitchKorea-RootCA.cer`와 `Install-SwitchKoreaClientTrust.ps1`만 담당자 PC로 복사한다. `.pfx`나 서버·루트 개인키는 복사하지 않는다.
+2. 담당자 PC의 관리자 PowerShell에서 인증서 지문을 대조해 설치한다.
+
+   ```powershell
+   .\Install-SwitchKoreaClientTrust.ps1 -CertificatePath .\SwitchKorea-RootCA.cer -ExpectedThumbprint <루트-지문>
+   ```
+
+3. 사내 DNS에 `sales.switchkorea.local`을 서버 고정 IP로 등록한다. DNS 적용 전에는 관리자 권한으로 hosts 파일에 같은 매핑을 임시 추가한다.
+4. 브라우저에서 서비스 주소를 열고 인증서 경고가 없는지 확인한다.
+
+## 4. 초기 사용자 및 보안
+
+- 설치 시 `jhlee`, `twpark`, `mcchoi`, `sylee`, `cslee`를 멱등 방식으로 만든다.
+- 계정별 임시 비밀번호는 서로 다르며 최초 로그인 후 변경해야 한다.
+- 초기 자격증명 파일은 현재 설치 사용자와 로컬 Administrators만 읽는다. 다섯 사용자의 변경 완료 후 안전하게 삭제한다.
+- 로그인·권한 거부·단가·출고·담당자 변경은 감사 이력과 대조한다.
+
+## 5. 점검 및 장애 대응
+
+1. `/health`로 프로세스 생존 상태, `/health/ready`로 PostgreSQL 연결 상태를 확인한다.
+2. IIS 앱 풀, Windows 응용프로그램 로그, PostgreSQL 서비스·로그, 디스크 여유 공간 순으로 확인한다.
+3. PostgreSQL이 외부 인터페이스의 5432에서 수신하지 않는지 확인한다.
+4. 인증서 만료 90일 전에 승인된 갱신 절차를 진행한다. 스크립트는 잘못된 기존 인증서를 자동 교체하지 않는다.
+5. 서버 PC가 업무시간과 02:00 백업 시간에 절전되지 않도록 전원 정책을 유지한다.
+
+## 6. 백업 및 복원
+
+- 작업 스케줄러의 `SwitchKorea-Sales-Backup`을 매일 02:00 실행하고 결과 코드를 점검한다.
+- 운영 DB에 직접 복원하지 않는다. 최신 dump를 고유한 검증 DB로 복원한 뒤 사용자·거래처·품목·출고·감사 이력 건수를 비교한다.
+- 로컬 백업은 PC 고장에 함께 손실될 수 있으므로 운영 안정화 후 NAS 또는 별도 저장장치로 2차 복사한다.
+
+## 7. 운영 승인 체크리스트
+
+- Front-end 테스트·빌드와 Back-end·DB 테스트 통과
+- 인증서 SAN, 체인, 만료일과 HTTPS 무경고 확인
+- 서버 재부팅 후 IIS·PostgreSQL 자동 시작 및 데이터 유지
+- 다섯 계정 최초 로그인·비밀번호 변경 확인
+- 담당자 소유권별 수정 허용/403 거부 확인
+- CIDR 외 80/443 차단 및 외부 5432 미노출 확인
+- 백업 생성·SHA-256·격리 복원 건수 일치
+- 팀장 최종 승인과 승인 시각 기록
