@@ -16,20 +16,26 @@ using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Shipments;
 using SalesManagement.Core.Targets;
 using SalesManagement.InMemory.Repositories;
+using SalesManagement.Postgres;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 
-builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
-builder.Services.AddSingleton<ICustomerRepository, InMemoryCustomerRepository>();
-builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
-builder.Services.AddSingleton<IPriceRepository, InMemoryPriceRepository>();
-builder.Services.AddSingleton<IShipmentRepository, InMemoryShipmentRepository>();
-builder.Services.AddSingleton<IRateRepository, InMemoryRateRepository>();
-builder.Services.AddSingleton<ITargetRepository, InMemoryTargetRepository>();
-builder.Services.AddSingleton<IAuditRepository, InMemoryAuditRepository>();
-builder.Services.AddSingleton<IImportBatchRepository, InMemoryImportBatchRepository>();
+var salesConnection = builder.Configuration.GetConnectionString("SalesManagement");
+if (!string.IsNullOrWhiteSpace(salesConnection)) builder.Services.AddSalesPostgres(salesConnection);
+else
+{
+    builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
+    builder.Services.AddSingleton<ICustomerRepository, InMemoryCustomerRepository>();
+    builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
+    builder.Services.AddSingleton<IPriceRepository, InMemoryPriceRepository>();
+    builder.Services.AddSingleton<IShipmentRepository, InMemoryShipmentRepository>();
+    builder.Services.AddSingleton<IRateRepository, InMemoryRateRepository>();
+    builder.Services.AddSingleton<ITargetRepository, InMemoryTargetRepository>();
+    builder.Services.AddSingleton<IAuditRepository, InMemoryAuditRepository>();
+    builder.Services.AddSingleton<IImportBatchRepository, InMemoryImportBatchRepository>();
+}
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(AuthOptions.Default);
@@ -37,10 +43,11 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PriceService>();
-builder.Services.AddSingleton<ShipmentService>();
-builder.Services.AddSingleton<AuditService>();
-builder.Services.AddSingleton<AdminUserService>();
-builder.Services.AddSingleton<ExcelImportService>();
+builder.Services.AddSingleton<ImportValidationStore>();
+builder.Services.AddScoped<ShipmentService>();
+builder.Services.AddScoped<AuditService>();
+builder.Services.AddScoped<AdminUserService>();
+builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<RateService>();
 builder.Services.AddScoped<TargetService>();
 builder.Services.AddScoped<DashboardService>();

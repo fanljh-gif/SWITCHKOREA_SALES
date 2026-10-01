@@ -8,11 +8,17 @@ using SalesManagement.Core.Shipments;
 
 namespace SalesManagement.Core.Imports;
 
+public sealed class ImportValidationStore
+{
+    internal ConcurrentDictionary<Guid, ImportValidation> Batches { get; } = new();
+}
+
 public sealed class ExcelImportService(
     IUserRepository users, ICustomerRepository customers, IProductRepository products, IPriceRepository prices,
-    IShipmentRepository shipments, IImportBatchRepository batches, ShipmentService shipmentService, TimeProvider clock)
+    IShipmentRepository shipments, IImportBatchRepository batches, ShipmentService shipmentService, TimeProvider clock,
+    ITransactionRunner? transactions = null, IAuditRepository? audits = null, ImportValidationStore? validationStore = null)
 {
-    private readonly ConcurrentDictionary<Guid, ImportValidation> _validated = new();
+    private readonly ConcurrentDictionary<Guid, ImportValidation> _validated = validationStore?.Batches ?? new();
     private static readonly IReadOnlyDictionary<ImportKind, string[]> Required = new Dictionary<ImportKind, string[]>
     {
         [ImportKind.Customer] = ["Code", "CompanyName", "Country", "Currency", "OwnerLoginId"],
@@ -55,15 +61,21 @@ public sealed class ExcelImportService(
     {
         if (!_validated.TryGetValue(batchId, out var validation) || validation.ExpiresAt <= clock.GetUtcNow()) throw new InvalidImportBatchException("가져오기 배치가 없거나 만료되었습니다.");
         if (validation.Errors.Count > 0 || validation.Rows.Any(x => x.Status == ImportRowStatus.Invalid)) throw new InvalidImportBatchException();
+        return transactions is null ? await CommitCore(validation, actor, ct) : await transactions.ExecuteAsync(token => CommitCore(validation, actor, token), ct);
+    }
+
+    private async Task<ImportResult> CommitCore(ImportValidation validation, User actor, CancellationToken ct)
+    {
         var applied = 0;
         foreach (var row in validation.Rows.Where(x => x.Status == ImportRowStatus.New))
         {
             await Apply(row.Values, validation.Kind, actor, ct); applied++;
         }
-        var batch = await batches.GetAsync(batchId, ct) ?? throw new InvalidImportBatchException();
+        var batch = await batches.GetAsync(validation.BatchId, ct) ?? throw new InvalidImportBatchException();
         batch.Status = ImportStatus.Committed; await batches.UpdateAsync(batch, batch.Version, ct);
-        _validated.TryRemove(batchId, out _);
-        return new ImportResult(batchId, applied);
+        if (audits is not null) await audits.AddAsync(new AuditEntry { ActorUserId = actor.Id, Target = $"import:{validation.BatchId}", Action = "commit", AfterJson = $"{{\"appliedCount\":{applied}}}" }, ct);
+        _validated.TryRemove(validation.BatchId, out _);
+        return new ImportResult(validation.BatchId, applied);
     }
 
     private async Task<ImportRowResult> ValidateRow(IXLRow row, IReadOnlyDictionary<string, int> headers, ImportKind kind, CancellationToken ct)
