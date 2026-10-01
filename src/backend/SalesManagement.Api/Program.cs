@@ -8,6 +8,7 @@ using SalesManagement.Core.Models;
 using SalesManagement.Core.Prices;
 using SalesManagement.Core.Products;
 using SalesManagement.Core.Repositories;
+using SalesManagement.Core.Shipments;
 using SalesManagement.InMemory.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,6 +29,7 @@ builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PriceService>();
+builder.Services.AddScoped<ShipmentService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -51,6 +53,7 @@ app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapAuthEndpoints();
 app.MapMasterDataEndpoints();
+app.MapShipmentEndpoints();
 app.Run();
 
 public partial class Program;
