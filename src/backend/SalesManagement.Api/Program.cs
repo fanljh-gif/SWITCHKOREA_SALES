@@ -1,5 +1,7 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Identity;
+using System.Text.Json;
+using System.Text.Json.Serialization;
 using SalesManagement.Core.Admin;
 using SalesManagement.Core.Audit;
 using SalesManagement.Api.Endpoints;
@@ -21,6 +23,7 @@ using SalesManagement.Postgres;
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
+builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
 var salesConnection = builder.Configuration.GetConnectionString("SalesManagement");
 if (!string.IsNullOrWhiteSpace(salesConnection)) builder.Services.AddSalesPostgres(salesConnection);
@@ -62,6 +65,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+app.UseDefaultFiles();
+app.UseStaticFiles();
 app.Use(async (context, next) =>
 {
     try { await next(); }
@@ -80,6 +85,7 @@ app.MapRateTargetEndpoints();
 app.MapDashboardEndpoints();
 app.MapImportEndpoints();
 app.MapAdminEndpoints();
+app.MapFallbackToFile("index.html");
 app.Run();
 
 public partial class Program;

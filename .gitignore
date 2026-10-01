@@ -6,3 +6,4 @@ dist/
 bin/
 obj/
 .tools/
+artifacts/

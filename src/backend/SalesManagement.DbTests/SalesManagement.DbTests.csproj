@@ -16,6 +16,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\SalesManagement.Core\SalesManagement.Core.csproj" />
+    <ProjectReference Include="..\SalesManagement.InMemory\SalesManagement.InMemory.csproj" />
     <ProjectReference Include="..\SalesManagement.Postgres\SalesManagement.Postgres.csproj" />
   </ItemGroup>
 </Project>
