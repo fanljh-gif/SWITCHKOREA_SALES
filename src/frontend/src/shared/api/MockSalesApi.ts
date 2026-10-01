@@ -18,9 +18,17 @@ import type {
 
 export class MockSalesApi implements SalesApi {
   private currentUser: User | null
+  private dashboardSummary: DashboardSummary
 
-  constructor(options: { currentUser?: User | null } = {}) {
+  constructor(options: { currentUser?: User | null; dashboardSummary?: DashboardSummary } = {}) {
     this.currentUser = options.currentUser ?? null
+    this.dashboardSummary = options.dashboardSummary ?? {
+      todaySalesKrw: 0,
+      monthSalesKrw: 0,
+      monthTargetKrw: 0,
+      achievementPercent: 0,
+      currencySales: [],
+    }
   }
 
   async getCurrentUser(): Promise<User | null> { return this.currentUser }
@@ -68,7 +76,7 @@ export class MockSalesApi implements SalesApi {
   async listSalesTargets(_yearMonth: string): Promise<SalesTarget[]> { return [] }
   async updateSalesTarget(input: SalesTarget): Promise<SalesTarget> { return input }
   async getDashboardSummary(_query: DashboardQuery): Promise<DashboardSummary> {
-    return { todaySalesKrw: 0, monthSalesKrw: 0, monthTargetKrw: 0, achievementPercent: 0, currencySales: [] }
+    return this.dashboardSummary
   }
 
   async validateImport(_input: ImportRequest): Promise<ImportValidation> {

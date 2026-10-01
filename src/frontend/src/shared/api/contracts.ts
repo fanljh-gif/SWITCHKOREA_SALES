@@ -117,6 +117,15 @@ export interface DashboardSummary {
   monthTargetKrw: number
   achievementPercent: number
   currencySales: CurrencySales[]
+  ownerSales?: SalesPerformance[]
+  customerSales?: SalesPerformance[]
+  productSales?: SalesPerformance[]
+}
+
+export interface SalesPerformance {
+  id: string
+  name: string
+  krwAmount: number
 }
 
 export interface ImportRowError {
