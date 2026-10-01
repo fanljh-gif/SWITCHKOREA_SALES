@@ -32,7 +32,7 @@ public sealed class InitialAccountSeeder(
                 continue;
             }
 
-            var temporaryPassword = GenerateTemporaryPassword();
+            var generatedSecret = GenerateTemporaryPassword();
             var user = new User
             {
                 LoginId = definition.LoginId,
@@ -42,9 +42,9 @@ public sealed class InitialAccountSeeder(
                 Role = definition.Role,
                 PasswordChangeRequired = true,
             };
-            user.PasswordHash = passwordHasher.HashPassword(user, temporaryPassword);
+            user.PasswordHash = passwordHasher.HashPassword(user, generatedSecret);
             await users.AddAsync(user, cancellationToken);
-            created.Add(new InitialCredential(user.LoginId, temporaryPassword));
+            created.Add(new InitialCredential(user.LoginId, generatedSecret));
         }
 
         await transaction.CommitAsync(cancellationToken);

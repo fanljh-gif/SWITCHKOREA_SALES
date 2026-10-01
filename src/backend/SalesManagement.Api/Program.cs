@@ -1,10 +1,12 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using SalesManagement.Core.Admin;
 using SalesManagement.Core.Audit;
 using SalesManagement.Api.Endpoints;
+using SalesManagement.Api.Configuration;
 using SalesManagement.Core.Auth;
 using SalesManagement.Core.Customers;
 using SalesManagement.Core.Dashboard;
@@ -17,28 +19,14 @@ using SalesManagement.Core.Rates;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Shipments;
 using SalesManagement.Core.Targets;
-using SalesManagement.InMemory.Repositories;
-using SalesManagement.Postgres;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
 builder.Logging.AddConsole();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
-var salesConnection = builder.Configuration.GetConnectionString("SalesManagement");
-if (!string.IsNullOrWhiteSpace(salesConnection)) builder.Services.AddSalesPostgres(salesConnection);
-else
-{
-    builder.Services.AddSingleton<IUserRepository, InMemoryUserRepository>();
-    builder.Services.AddSingleton<ICustomerRepository, InMemoryCustomerRepository>();
-    builder.Services.AddSingleton<IProductRepository, InMemoryProductRepository>();
-    builder.Services.AddSingleton<IPriceRepository, InMemoryPriceRepository>();
-    builder.Services.AddSingleton<IShipmentRepository, InMemoryShipmentRepository>();
-    builder.Services.AddSingleton<IRateRepository, InMemoryRateRepository>();
-    builder.Services.AddSingleton<ITargetRepository, InMemoryTargetRepository>();
-    builder.Services.AddSingleton<IAuditRepository, InMemoryAuditRepository>();
-    builder.Services.AddSingleton<IImportBatchRepository, InMemoryImportBatchRepository>();
-}
+builder.WebHost.UseIISIntegration();
+builder.Services.AddSalesProductionRuntime(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(AuthOptions.Default);
@@ -65,6 +53,11 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
+if (app.Environment.IsProduction())
+{
+    app.UseHsts();
+    app.UseHttpsRedirection();
+}
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (context, next) =>
@@ -78,6 +71,10 @@ app.Use(async (context, next) =>
 app.UseAuthentication();
 app.UseAuthorization();
 app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
+app.MapHealthChecks("/health/ready", new HealthCheckOptions
+{
+    Predicate = registration => registration.Tags.Contains("ready"),
+});
 app.MapAuthEndpoints();
 app.MapMasterDataEndpoints();
 app.MapShipmentEndpoints();
