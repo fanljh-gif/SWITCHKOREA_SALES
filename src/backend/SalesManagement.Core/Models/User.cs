@@ -10,4 +10,6 @@ public sealed class User : EntityBase
     public EntityStatus Status { get; set; } = EntityStatus.Active;
     public bool PasswordChangeRequired { get; set; }
     public DateTimeOffset? LockedUntil { get; set; }
+    public int FailedLoginAttempts { get; set; }
+    public DateTimeOffset? LastActivityAt { get; set; }
 }
