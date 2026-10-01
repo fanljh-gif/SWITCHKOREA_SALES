@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 
 import { App } from './app/App'
 import { MockSalesApi } from './shared/api/MockSalesApi'
+import './app/styles.css'
 
 const root = document.getElementById('root')
 if (!root) throw new Error('Root element is missing')

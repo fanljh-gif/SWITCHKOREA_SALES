@@ -144,6 +144,16 @@ export interface ImportValidation {
   canCommit: boolean
 }
 
+export interface AuditLog {
+  id: string
+  actorName: string
+  occurredAt: string
+  target: string
+  action: string
+  before?: string
+  after?: string
+}
+
 export interface ListQuery {
   search?: string
   status?: ActiveStatus

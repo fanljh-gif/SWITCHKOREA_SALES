@@ -1,4 +1,5 @@
 import type {
+  AuditLog,
   Customer,
   DailyRate,
   DashboardQuery,
@@ -29,6 +30,7 @@ export interface SalesApi {
   createUser(input: Create<User>): Promise<User>
   updateUser(id: string, input: Update<User>): Promise<User>
   cancelUser(id: string, version: number): Promise<void>
+  listAuditLogs(query?: ListQuery): Promise<AuditLog[]>
 
   listCustomers(query?: ListQuery): Promise<Customer[]>
   getCustomer(id: string): Promise<Customer>
