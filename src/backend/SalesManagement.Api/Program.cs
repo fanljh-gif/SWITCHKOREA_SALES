@@ -3,12 +3,15 @@ using Microsoft.AspNetCore.Identity;
 using SalesManagement.Api.Endpoints;
 using SalesManagement.Core.Auth;
 using SalesManagement.Core.Customers;
+using SalesManagement.Core.Dashboard;
 using SalesManagement.Core.Exceptions;
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Prices;
 using SalesManagement.Core.Products;
+using SalesManagement.Core.Rates;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Shipments;
+using SalesManagement.Core.Targets;
 using SalesManagement.InMemory.Repositories;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -30,6 +33,9 @@ builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PriceService>();
 builder.Services.AddScoped<ShipmentService>();
+builder.Services.AddScoped<RateService>();
+builder.Services.AddScoped<TargetService>();
+builder.Services.AddScoped<DashboardService>();
 builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
 {
     options.Cookie.HttpOnly = true;
@@ -54,6 +60,8 @@ app.MapGet("/health", () => Results.Ok(new { status = "healthy" }));
 app.MapAuthEndpoints();
 app.MapMasterDataEndpoints();
 app.MapShipmentEndpoints();
+app.MapRateTargetEndpoints();
+app.MapDashboardEndpoints();
 app.Run();
 
 public partial class Program;
