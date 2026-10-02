@@ -4,12 +4,16 @@ using Microsoft.Extensions.DependencyInjection;
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Postgres;
+using SalesManagement.Postgres.Configuration;
 using SalesManagement.Postgres.Repositories;
 using SalesManagement.Setup;
 
 var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__SalesManagement");
+var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
+if (string.IsNullOrWhiteSpace(connectionString) && !string.IsNullOrWhiteSpace(databaseUrl))
+    connectionString = RenderPostgresConnectionString.Normalize(databaseUrl);
 if (string.IsNullOrWhiteSpace(connectionString))
-    throw new InvalidOperationException("ConnectionStrings__SalesManagement is required.");
+    throw new InvalidOperationException("ConnectionStrings__SalesManagement or DATABASE_URL is required.");
 
 var credentialsPath = GetOption(args, "--credentials-path")
     ?? @"C:\SwitchKorea\Secrets\initial-credentials.txt";

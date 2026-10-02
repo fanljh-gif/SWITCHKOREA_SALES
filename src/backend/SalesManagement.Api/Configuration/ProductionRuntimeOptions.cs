@@ -1,3 +1,5 @@
+using SalesManagement.Postgres.Configuration;
+
 namespace SalesManagement.Api.Configuration;
 
 public sealed record ProductionRuntimeOptions(string? ConnectionString, string? DataProtectionPath)
@@ -5,6 +7,7 @@ public sealed record ProductionRuntimeOptions(string? ConnectionString, string? 
     public const string ConnectionStringName = "SalesManagement";
     public const string DataProtectionPathVariable = "SWITCHKOREA_DATA_PROTECTION_PATH";
     public const string ConnectionFileVariable = "SWITCHKOREA_CONNECTION_FILE";
+    public const string DatabaseUrlVariable = "DATABASE_URL";
 
     public static ProductionRuntimeOptions From(IConfiguration configuration)
     {
@@ -12,6 +15,9 @@ public sealed record ProductionRuntimeOptions(string? ConnectionString, string? 
         var protectedPath = configuration[ConnectionFileVariable];
         if (string.IsNullOrWhiteSpace(connectionString) && !string.IsNullOrWhiteSpace(protectedPath))
             connectionString = ReadProtectedConnection(protectedPath);
+        var databaseUrl = configuration[DatabaseUrlVariable];
+        if (string.IsNullOrWhiteSpace(connectionString) && !string.IsNullOrWhiteSpace(databaseUrl))
+            connectionString = RenderPostgresConnectionString.Normalize(databaseUrl);
         return new ProductionRuntimeOptions(connectionString, configuration[DataProtectionPathVariable]);
     }
 
