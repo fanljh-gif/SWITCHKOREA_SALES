@@ -63,7 +63,9 @@ public sealed class PostgresConstraintTests
     {
         var options = new DbContextOptionsBuilder<SalesDbContext>().UseNpgsql("Host=localhost;Database=test;Username=test").Options;
         using var context = new SalesDbContext(options);
-        var migration = context.GetService<IMigrationsAssembly>().CreateMigration(context.GetService<IMigrationsAssembly>().Migrations.Values.Single(), "10.0");
+        var migrations = context.GetService<IMigrationsAssembly>();
+        var initial = migrations.Migrations.Single(x => x.Key.EndsWith("_InitialCreate", StringComparison.Ordinal)).Value;
+        var migration = migrations.CreateMigration(initial, "10.0");
         Assert.Contains(migration.UpOperations.OfType<SqlOperation>(), operation => operation.Sql.Contains("EX_prices_no_overlap", StringComparison.Ordinal));
     }
 

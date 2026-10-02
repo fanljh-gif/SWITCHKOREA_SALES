@@ -108,6 +108,41 @@ public sealed class ProductionRuntimeTests
         }
     }
 
+    [Fact]
+    public void Render_mode_uses_PostgreSql_data_protection_without_Windows_DPAPI()
+    {
+        var services = new ServiceCollection();
+        services.AddLogging();
+        services.AddSalesProductionRuntime(Configuration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:SalesManagement"] = "Host=127.0.0.1;Port=1;Database=missing;Username=missing;Timeout=1",
+            ["SWITCHKOREA_HOSTING_MODE"] = "Render",
+            ["RENDER_EXTERNAL_HOSTNAME"] = "switch-korea-sales-test.onrender.com",
+        }), Environment(Environments.Production));
+
+        using var provider = services.BuildServiceProvider();
+        var db = provider.GetRequiredService<SalesManagement.Postgres.SalesDbContext>();
+
+        Assert.NotNull(db.Model.FindEntityType("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey"));
+        Assert.Null(provider.GetRequiredService<IOptions<KeyManagementOptions>>().Value.XmlEncryptor);
+    }
+
+    [Fact]
+    public void Unknown_production_hosting_mode_is_rejected()
+    {
+        var services = new ServiceCollection();
+        var configuration = Configuration(new Dictionary<string, string?>
+        {
+            ["ConnectionStrings:SalesManagement"] = "Host=127.0.0.1;Database=missing;Username=missing",
+            ["SWITCHKOREA_HOSTING_MODE"] = "UnknownCloud",
+        });
+
+        var error = Assert.Throws<InvalidOperationException>(() =>
+            services.AddSalesProductionRuntime(configuration, Environment(Environments.Production)));
+
+        Assert.Contains("SWITCHKOREA_HOSTING_MODE", error.Message);
+    }
+
     private static IConfiguration Configuration(IEnumerable<KeyValuePair<string, string?>> values) =>
         new ConfigurationBuilder().AddInMemoryCollection(values).Build();
 

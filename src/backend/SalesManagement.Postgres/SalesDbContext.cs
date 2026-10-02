@@ -1,10 +1,12 @@
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 using SalesManagement.Core.Models;
 
 namespace SalesManagement.Postgres;
 
-public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : DbContext(options)
+public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : DbContext(options), IDataProtectionKeyContext
 {
+    public DbSet<DataProtectionKey> DataProtectionKeys => Set<DataProtectionKey>();
     public DbSet<User> Users => Set<User>();
     public DbSet<Customer> Customers => Set<Customer>();
     public DbSet<Product> Products => Set<Product>();

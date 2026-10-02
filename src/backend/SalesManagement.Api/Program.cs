@@ -26,6 +26,7 @@ builder.Logging.AddConsole();
 builder.Services.ConfigureHttpJsonOptions(options => options.SerializerOptions.Converters.Add(new JsonStringEnumConverter(JsonNamingPolicy.CamelCase)));
 
 builder.WebHost.UseIISIntegration();
+builder.Services.AddSalesProxyRuntime(builder.Configuration, builder.Environment);
 builder.Services.AddSalesProductionRuntime(builder.Configuration, builder.Environment);
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
@@ -53,11 +54,8 @@ builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationSc
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
-if (app.Environment.IsProduction())
-{
-    app.UseHsts();
-    app.UseHttpsRedirection();
-}
+app.UseSalesProxyRuntime(builder.Environment);
+app.UseSalesHttpsPolicy(builder.Environment);
 app.UseDefaultFiles();
 app.UseStaticFiles();
 app.Use(async (context, next) =>

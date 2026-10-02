@@ -18,16 +18,25 @@ public static class ProductionRuntimeExtensions
         {
             if (string.IsNullOrWhiteSpace(runtime.ConnectionString))
                 throw new InvalidOperationException("ConnectionStrings:SalesManagement is required in Production.");
-            if (string.IsNullOrWhiteSpace(runtime.DataProtectionPath))
-                throw new InvalidOperationException($"{ProductionRuntimeOptions.DataProtectionPathVariable} is required in Production.");
-            if (!OperatingSystem.IsWindows())
-                throw new PlatformNotSupportedException("Production data-protection keys require Windows DPAPI.");
+            var dataProtection = services.AddDataProtection()
+                .SetApplicationName("SwitchKorea.SalesManagement");
+            if (runtime.HostingMode == ProductionHostingMode.Render)
+            {
+                if (string.IsNullOrWhiteSpace(runtime.ExternalHostname))
+                    throw new InvalidOperationException($"{ProductionRuntimeOptions.RenderExternalHostnameVariable} is required in Render mode.");
+                dataProtection.PersistKeysToDbContext<SalesDbContext>();
+            }
+            else
+            {
+                if (string.IsNullOrWhiteSpace(runtime.DataProtectionPath))
+                    throw new InvalidOperationException($"{ProductionRuntimeOptions.DataProtectionPathVariable} is required in Production.");
+                if (!OperatingSystem.IsWindows())
+                    throw new PlatformNotSupportedException("Production data-protection keys require Windows DPAPI.");
 
-            var keyDirectory = Directory.CreateDirectory(Path.GetFullPath(runtime.DataProtectionPath));
-            services.AddDataProtection()
-                .SetApplicationName("SwitchKorea.SalesManagement")
-                .PersistKeysToFileSystem(keyDirectory)
-                .ProtectKeysWithDpapi(protectToLocalMachine: true);
+                var keyDirectory = Directory.CreateDirectory(Path.GetFullPath(runtime.DataProtectionPath));
+                dataProtection.PersistKeysToFileSystem(keyDirectory)
+                    .ProtectKeysWithDpapi(protectToLocalMachine: true);
+            }
         }
 
         if (!string.IsNullOrWhiteSpace(runtime.ConnectionString))
