@@ -4,15 +4,22 @@ param(
     [Parameter(Mandatory)] [string] $BackupFile,
     [Parameter(Mandatory)] [string] $TargetDatabase,
     [Parameter(Mandatory)] [string] $Username,
-    [string] $HostName = 'localhost',
-    [int] $Port = 5432
+    [string] $HostName = '127.0.0.1',
+    [int] $Port = 5432,
+    [switch] $AllowProductionRestore,
+    [scriptblock] $CommandRunner = { param($Executable, $Arguments) & $Executable @Arguments | Out-Null; return $LASTEXITCODE }
 )
 
 $ErrorActionPreference = 'Stop'
-if (-not (Test-Path -LiteralPath $PgRestorePath -PathType Leaf)) { throw "pg_restore 실행 파일이 없습니다: $PgRestorePath" }
-if (-not (Test-Path -LiteralPath $BackupFile -PathType Leaf)) { throw "복원 파일이 없습니다: $BackupFile" }
-if ([string]::IsNullOrWhiteSpace($env:PGPASSWORD)) { throw '현재 프로세스에 PGPASSWORD가 설정되어야 합니다.' }
-if ($PSCmdlet.ShouldProcess("$HostName/$TargetDatabase", "백업 '$BackupFile'을 clean/restore")) {
-    & $PgRestorePath --host $HostName --port $Port --username $Username --dbname $TargetDatabase --clean --if-exists --single-transaction $BackupFile
-    if ($LASTEXITCODE -ne 0) { throw "복원 실패(exit=$LASTEXITCODE)" }
+if (-not (Test-Path -LiteralPath $PgRestorePath -PathType Leaf)) { throw "pg_restore not found: $PgRestorePath" }
+if (-not (Test-Path -LiteralPath $BackupFile -PathType Leaf)) { throw "Backup file not found: $BackupFile" }
+if ((Get-Item -LiteralPath $BackupFile).Length -le 0) { throw 'Backup file is empty.' }
+if ([string]::IsNullOrWhiteSpace($env:PGPASSWORD)) { throw 'A process-scoped PostgreSQL credential is required.' }
+$isProduction = $TargetDatabase -eq 'switch_korea_sales'
+if ($isProduction -and -not $AllowProductionRestore) { throw 'Production restore requires -AllowProductionRestore and explicit ShouldProcess confirmation.' }
+
+if ($PSCmdlet.ShouldProcess("$HostName/$TargetDatabase", "Restore verified backup '$BackupFile'")) {
+    $arguments = @('--host', $HostName, '--port', "$Port", '--username', $Username, '--dbname', $TargetDatabase, '--clean', '--if-exists', '--single-transaction', '--no-owner', $BackupFile)
+    $exitCode = & $CommandRunner $PgRestorePath $arguments
+    if ($exitCode -ne 0) { throw "Restore failed with exit code $exitCode." }
 }

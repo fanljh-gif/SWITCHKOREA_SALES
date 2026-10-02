@@ -76,8 +76,10 @@ IIS 앱 풀은 AlwaysRunning이며, HTTP 80은 ASP.NET Core의 HTTPS 전환 경�
 
 ## 6. 백업 및 복원
 
-- 작업 스케줄러의 `SwitchKorea-Sales-Backup`을 매일 02:00 실행하고 결과 코드를 점검한다.
-- 운영 DB에 직접 복원하지 않는다. 최신 dump를 고유한 검증 DB로 복원한 뒤 사용자·거래처·품목·출고·감사 이력 건수를 비교한다.
+- 설치기는 별도 `switch_korea_backup` 역할과 Machine DPAPI 보호 파일 `C:\SwitchKorea\Secrets\backup-connection.dpapi`를 만든다. 백업 작업은 제한된 `LOCAL SERVICE` 계정으로 실행하며 평문 비밀번호를 인수나 로그에 남기지 않는다.
+- 작업 스케줄러의 `SwitchKorea-Sales-Backup`을 매일 02:00 실행하고 결과 코드를 점검한다. 성공 백업은 custom-format dump, `pg_restore --list` 검증, SHA-256 sidecar까지 모두 있어야 한다.
+- 운영 DB에 직접 복원하지 않는다. `Test-SalesBackupRestore.ps1`로 최신 검증 dump를 고유한 검증 DB에 복원한 뒤 사용자·거래처·품목·출고·감사 이력 건수를 비교한다.
+- `Restore-SalesDatabase.ps1`은 운영 DB 이름을 기본 차단한다. 운영 복원은 서비스 중지와 변경 승인을 받은 뒤 `-AllowProductionRestore`와 PowerShell 확인을 모두 거쳐야 한다.
 - 로컬 백업은 PC 고장에 함께 손실될 수 있으므로 운영 안정화 후 NAS 또는 별도 저장장치로 2차 복사한다.
 
 ## 7. 운영 승인 체크리스트

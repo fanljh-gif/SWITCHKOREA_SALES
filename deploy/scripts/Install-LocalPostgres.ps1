@@ -5,6 +5,7 @@ param(
     [string] $InstallRoot = 'C:\Program Files\PostgreSQL\18',
     [string] $DataDirectory = 'C:\SwitchKorea\PostgreSQL\data',
     [string] $ConnectionFile = 'C:\SwitchKorea\Secrets\db-connection.dpapi',
+    [string] $BackupConnectionFile = 'C:\SwitchKorea\Secrets\backup-connection.dpapi',
     [SecureString] $PostgresAdminPassword,
     [switch] $PlanOnly
 )
@@ -25,10 +26,10 @@ function ConvertFrom-SecureValue([SecureString] $Value) {
     finally { [Runtime.InteropServices.Marshal]::ZeroFreeBSTR($pointer) }
 }
 
-function Invoke-PsqlInput([string] $Executable, [string] $AdminSecret, [string] $Sql) {
+function Invoke-PsqlInput([string] $Executable, [string] $AdminSecret, [string] $Database, [string] $Sql) {
     $start = New-Object Diagnostics.ProcessStartInfo
     $start.FileName = $Executable
-    $start.Arguments = '-h 127.0.0.1 -p 5432 -U postgres -d postgres -v ON_ERROR_STOP=1 -X -q'
+    $start.Arguments = "-h 127.0.0.1 -p 5432 -U postgres -d $Database -v ON_ERROR_STOP=1 -X -q"
     $start.UseShellExecute = $false
     $start.RedirectStandardInput = $true
     $start.RedirectStandardOutput = $true
@@ -47,7 +48,7 @@ function Invoke-PsqlInput([string] $Executable, [string] $AdminSecret, [string] 
     return $output
 }
 
-function Protect-ConnectionFile([string] $ConnectionString, [string] $Path) {
+function Protect-ConnectionFile([string] $ConnectionString, [string] $Path, [string[]] $ReadSids) {
     $directory = Split-Path -Parent $Path
     New-Item -ItemType Directory -Path $directory -Force | Out-Null
     $plain = [Text.Encoding]::UTF8.GetBytes($ConnectionString)
@@ -65,14 +66,16 @@ function Protect-ConnectionFile([string] $ConnectionString, [string] $Path) {
         $rule = New-Object Security.AccessControl.FileSystemAccessRule($sid, $entry[1], [Security.AccessControl.AccessControlType]::Allow)
         $security.AddAccessRule($rule)
     }
-    $iisUsers = New-Object Security.Principal.SecurityIdentifier('S-1-5-32-568')
-    $security.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($iisUsers, [Security.AccessControl.FileSystemRights]::Read, [Security.AccessControl.AccessControlType]::Allow)))
+    foreach ($sidText in $ReadSids) {
+        $reader = New-Object Security.Principal.SecurityIdentifier($sidText)
+        $security.AddAccessRule((New-Object Security.AccessControl.FileSystemAccessRule($reader, [Security.AccessControl.FileSystemRights]::Read, [Security.AccessControl.AccessControlType]::Allow)))
+    }
     (Get-Item -LiteralPath $Path).SetAccessControl($security)
 }
 
 if ($PlanOnly) {
     Write-Host "PLAN: verify PostgreSQL 18 installer SHA-256, install service $serviceName, listen on localhost only"
-    Write-Host "PLAN: create switch_korea_sales and least-privilege switch_korea_app; protect connection with Machine DPAPI at $ConnectionFile"
+    Write-Host "PLAN: create application and backup roles; protect Machine DPAPI connections at $ConnectionFile and $BackupConnectionFile"
     return
 }
 
@@ -112,18 +115,35 @@ Set-Service -Name $serviceName -StartupType Automatic
 
 $applicationSecret = New-RandomSecret
 $escapedSecret = $applicationSecret.Replace("'", "''")
+$backupSecret = New-RandomSecret
+$escapedBackupSecret = $backupSecret.Replace("'", "''")
 $sql = @"
 SELECT 'CREATE ROLE switch_korea_app LOGIN PASSWORD ''$escapedSecret'' NOSUPERUSER NOCREATEDB NOCREATEROLE NOREPLICATION' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'switch_korea_app')\gexec
 ALTER ROLE switch_korea_app PASSWORD '$escapedSecret';
+SELECT 'CREATE ROLE switch_korea_backup LOGIN PASSWORD ''$escapedBackupSecret'' NOSUPERUSER CREATEDB NOCREATEROLE NOREPLICATION' WHERE NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'switch_korea_backup')\gexec
+ALTER ROLE switch_korea_backup PASSWORD '$escapedBackupSecret';
 SELECT 'CREATE DATABASE switch_korea_sales OWNER switch_korea_app' WHERE NOT EXISTS (SELECT FROM pg_database WHERE datname = 'switch_korea_sales')\gexec
 "@
 $psql = Join-Path $InstallRoot 'bin\psql.exe'
-[void](Invoke-PsqlInput -Executable $psql -AdminSecret $adminSecret -Sql $sql)
+[void](Invoke-PsqlInput -Executable $psql -AdminSecret $adminSecret -Database 'postgres' -Sql $sql)
+$grantSql = @"
+GRANT CONNECT ON DATABASE switch_korea_sales TO switch_korea_backup;
+GRANT USAGE ON SCHEMA public TO switch_korea_backup;
+GRANT SELECT ON ALL TABLES IN SCHEMA public TO switch_korea_backup;
+GRANT SELECT ON ALL SEQUENCES IN SCHEMA public TO switch_korea_backup;
+ALTER DEFAULT PRIVILEGES FOR ROLE switch_korea_app IN SCHEMA public GRANT SELECT ON TABLES TO switch_korea_backup;
+ALTER DEFAULT PRIVILEGES FOR ROLE switch_korea_app IN SCHEMA public GRANT SELECT ON SEQUENCES TO switch_korea_backup;
+"@
+[void](Invoke-PsqlInput -Executable $psql -AdminSecret $adminSecret -Database 'switch_korea_sales' -Sql $grantSql)
 $credentialKey = 'Pass' + 'word'
 $connection = "Host=127.0.0.1;Port=5432;Database=switch_korea_sales;Username=switch_korea_app;$credentialKey=$applicationSecret;SSL Mode=Prefer"
-Protect-ConnectionFile -ConnectionString $connection -Path $ConnectionFile
+$backupConnection = "Host=127.0.0.1;Port=5432;Database=switch_korea_sales;Username=switch_korea_backup;$credentialKey=$backupSecret;SSL Mode=Prefer"
+Protect-ConnectionFile -ConnectionString $connection -Path $ConnectionFile -ReadSids @('S-1-5-32-568')
+Protect-ConnectionFile -ConnectionString $backupConnection -Path $BackupConnectionFile -ReadSids @('S-1-5-19')
 [Environment]::SetEnvironmentVariable('SWITCHKOREA_CONNECTION_FILE', $ConnectionFile, 'Machine')
+[Environment]::SetEnvironmentVariable('SWITCHKOREA_BACKUP_CONNECTION_FILE', $BackupConnectionFile, 'Machine')
 [Environment]::SetEnvironmentVariable('SWITCHKOREA_DATA_PROTECTION_PATH', 'C:\SwitchKorea\DataProtectionKeys', 'Machine')
 
 Write-Host "PostgreSQL service ready: $serviceName (localhost:5432)"
 Write-Host "Protected connection file: $ConnectionFile"
+Write-Host "Protected backup connection file: $BackupConnectionFile"
