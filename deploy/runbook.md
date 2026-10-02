@@ -1,5 +1,11 @@
 # SWITCH KOREA 영업관리 시스템 운영 인수서
 
+## 임시 Render 테스트 환경
+
+사내 설치 전 담당자 검증은 비공개 GitHub 저장소와 Render 무료 Web Service/PostgreSQL에서 수행한다. `Dockerfile`은 프런트엔드와 API를 하나의 이미지로 만들고 `deploy/render/start.sh`가 마이그레이션 성공 후 API를 시작한다. Render에는 `DATABASE_URL`, `PORT`, `RENDER_EXTERNAL_HOSTNAME`이 주입되어야 하며 `SWITCHKOREA_HOSTING_MODE=Render`를 사용한다.
+
+테스트 환경에는 가상 데이터만 입력한다. 무료 데이터베이스는 30일 내 종료하고, 테스트 완료 후 Web Service와 PostgreSQL을 삭제한다. 초기 비밀번호와 외부 데이터베이스 URL은 Git, Render 로그, 이 문서에 기록하지 않는다.
+
 ## 1. 확정 구성
 
 - 서버: `JHLEE`

@@ -1,0 +1,14 @@
+.git
+.gitignore
+.superpowers
+.tools
+.pnpm-store
+artifacts
+**/bin
+**/obj
+**/node_modules
+**/dist
+**/*.dpapi
+**/initial-credentials.txt
+deploy/.local
+deploy/installation-report.md
