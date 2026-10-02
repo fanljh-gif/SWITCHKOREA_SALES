@@ -6,6 +6,21 @@
 
 테스트 환경에는 가상 데이터만 입력한다. 무료 데이터베이스는 30일 내 종료하고, 테스트 완료 후 Web Service와 PostgreSQL을 삭제한다. 초기 비밀번호와 외부 데이터베이스 URL은 Git, Render 로그, 이 문서에 기록하지 않는다.
 
+### Render Blueprint 및 계정 초기화
+
+1. 비공개 GitHub 저장소에서 루트의 `render.yaml`을 Blueprint로 적용한다. 미리보기에는 `switch-korea-sales-test` Web Service와 `switch-korea-sales-test-db` PostgreSQL만 있어야 한다.
+2. 최초 계정 생성 시간에만 현재 PC의 공인 IP를 데이터베이스 접근 허용 목록에 추가하고 Render의 외부 PostgreSQL URL을 현재 PowerShell 프로세스에만 설정한다.
+
+   ```powershell
+   $env:RENDER_DATABASE_URL = Read-Host 'Render external PostgreSQL URL'
+   .\deploy\scripts\Initialize-RenderTestEnvironment.ps1
+   .\deploy\scripts\Initialize-RenderTestEnvironment.ps1 -VerifyOnly
+   Remove-Item Env:RENDER_DATABASE_URL
+   ```
+
+3. 두 번째 실행이 `created=0, existing=5`를 보고하고 `C:\SwitchKorea\Secrets\render-test-initial-credentials.txt`가 변경되지 않았는지 확인한다.
+4. 즉시 데이터베이스 접근 허용 목록을 private-network-only로 되돌린다. 자격증명 파일은 각 담당자에게 개별 전달하고 공유 문서나 채팅에 붙여넣지 않는다.
+
 ## 1. 확정 구성
 
 - 서버: `JHLEE`
