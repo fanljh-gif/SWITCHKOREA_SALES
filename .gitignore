@@ -7,3 +7,6 @@ bin/
 obj/
 .tools/
 artifacts/
+*.dpapi
+initial-credentials.txt
+deploy/.local/

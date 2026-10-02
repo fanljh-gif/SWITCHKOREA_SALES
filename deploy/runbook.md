@@ -37,6 +37,16 @@
 
 IIS 앱 풀은 AlwaysRunning이며, HTTP 80은 ASP.NET Core의 HTTPS 전환 경로로만 사용한다. 방화벽은 지정 CIDR에서 들어오는 80/443만 허용한다.
 
+### 전체 로컬 설치 실행
+
+실제 IP와 CIDR을 `C:\SwitchKorea\InstallState\network.json`에 `ServerIp`, `IntranetCidr` 속성으로 저장한다. 공식 PostgreSQL 18 Windows 설치 파일의 SHA-256을 게시자 값과 대조한 뒤 다음과 같이 계획을 확인한다.
+
+```powershell
+.\deploy\scripts\Install-LocalSalesManagement.ps1 -NetworkConfigPath C:\SwitchKorea\InstallState\network.json -PlanOnly
+```
+
+실제 실행에는 `-PostgresInstallerPath`와 `-PostgresInstallerSha256`을 추가한다. 설치 상태는 `C:\SwitchKorea\InstallState\state.json`에 비밀 없이 저장된다. 실패나 재부팅 뒤에는 동일한 명령을 다시 실행하면 완료 단계는 건너뛰고 실패 단계부터 재개한다. 기존 PostgreSQL 18 서비스를 이어서 구성할 때만 `-PostgresAdminPassword`를 보안 문자열로 전달한다.
+
 ## 3. 담당자 PC 설정
 
 1. `SwitchKorea-RootCA.cer`와 `Install-SwitchKoreaClientTrust.ps1`만 담당자 PC로 복사한다. `.pfx`나 서버·루트 개인키는 복사하지 않는다.

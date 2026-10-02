@@ -7,6 +7,7 @@ using Microsoft.Extensions.Diagnostics.HealthChecks;
 using Microsoft.Extensions.FileProviders;
 using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Options;
+using System.Security.Cryptography;
 using SalesManagement.Api.Configuration;
 using SalesManagement.Core.Repositories;
 using SalesManagement.InMemory.Repositories;
@@ -78,6 +79,33 @@ public sealed class ProductionRuntimeTests
         var repository = Assert.IsType<FileSystemXmlRepository>(options.XmlRepository);
         Assert.Equal(Path.GetFullPath(keyPath), repository.Directory.FullName, ignoreCase: true);
         Assert.NotNull(options.XmlEncryptor);
+    }
+
+    [Fact]
+    public void Production_loads_a_machine_protected_connection_file()
+    {
+        if (!OperatingSystem.IsWindows())
+            return;
+        var path = Path.Combine(Path.GetTempPath(), $"switch-korea-connection-{Guid.NewGuid():N}.dpapi");
+        var plain = System.Text.Encoding.UTF8.GetBytes("Host=127.0.0.1;Port=1;Database=missing;Username=missing;Timeout=1");
+        try
+        {
+            File.WriteAllBytes(path, ProtectedData.Protect(plain, null, DataProtectionScope.LocalMachine));
+            var services = new ServiceCollection();
+            services.AddSalesProductionRuntime(Configuration(new Dictionary<string, string?>
+            {
+                ["SWITCHKOREA_CONNECTION_FILE"] = path,
+                ["SWITCHKOREA_DATA_PROTECTION_PATH"] = Path.Combine(Path.GetTempPath(), $"switch-korea-keys-{Guid.NewGuid():N}"),
+            }), Environment(Environments.Production));
+
+            using var provider = services.BuildServiceProvider();
+            Assert.NotNull(provider.GetService<SalesManagement.Postgres.SalesDbContext>());
+        }
+        finally
+        {
+            Array.Clear(plain);
+            File.Delete(path);
+        }
     }
 
     private static IConfiguration Configuration(IEnumerable<KeyValuePair<string, string?>> values) =>

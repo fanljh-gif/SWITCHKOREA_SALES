@@ -13,7 +13,11 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 var credentialsPath = GetOption(args, "--credentials-path")
     ?? @"C:\SwitchKorea\Secrets\initial-credentials.txt";
-var migrate = args.Contains("--migrate", StringComparer.OrdinalIgnoreCase);
+var migrateOnly = args.Contains("--migrate-only", StringComparer.OrdinalIgnoreCase);
+var seedOnly = args.Contains("--seed-only", StringComparer.OrdinalIgnoreCase);
+if (migrateOnly && seedOnly)
+    throw new ArgumentException("--migrate-only and --seed-only cannot be combined.");
+var migrate = migrateOnly || args.Contains("--migrate", StringComparer.OrdinalIgnoreCase);
 
 var services = new ServiceCollection();
 services.AddDbContext<SalesDbContext>(options => options.UseNpgsql(connectionString));
@@ -26,6 +30,12 @@ await using var scope = provider.CreateAsyncScope();
 var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
 if (migrate)
     await db.Database.MigrateAsync();
+
+if (migrateOnly)
+{
+    Console.WriteLine("Database migrations completed.");
+    return;
+}
 
 InitialAccountDefinition[] accounts =
 [

@@ -28,7 +28,9 @@ if ($PlanOnly) {
 $principal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
 if (-not $principal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) { throw 'Administrator elevation is required.' }
 if (-not (Test-Path -LiteralPath $SourceRoot -PathType Container)) { throw "SourceRoot not found: $SourceRoot" }
-if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('ConnectionStrings__SalesManagement', 'Machine'))) { throw 'Protected Machine connection setting is required.' }
+$directConnection = [Environment]::GetEnvironmentVariable('ConnectionStrings__SalesManagement', 'Machine')
+$protectedConnectionFile = [Environment]::GetEnvironmentVariable('SWITCHKOREA_CONNECTION_FILE', 'Machine')
+if ([string]::IsNullOrWhiteSpace($directConnection) -and [string]::IsNullOrWhiteSpace($protectedConnectionFile)) { throw 'Protected Machine connection setting is required.' }
 if ([string]::IsNullOrWhiteSpace([Environment]::GetEnvironmentVariable('SWITCHKOREA_DATA_PROTECTION_PATH', 'Machine'))) { throw 'Machine data-protection path setting is required.' }
 $certificate = Get-Item "Cert:\LocalMachine\My\$CertificateThumbprint" -ErrorAction Stop
 if (-not $certificate.HasPrivateKey) { throw 'The server certificate private key is unavailable.' }
