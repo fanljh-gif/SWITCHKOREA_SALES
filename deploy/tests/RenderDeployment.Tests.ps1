@@ -4,6 +4,7 @@ param()
 $ErrorActionPreference = 'Stop'
 $repoRoot = (Resolve-Path (Join-Path $PSScriptRoot '..\..')).Path
 $blueprintPath = Join-Path $repoRoot 'render.yaml'
+$dockerfilePath = Join-Path $repoRoot 'Dockerfile'
 $bootstrapPath = Join-Path $repoRoot 'deploy\scripts\Initialize-RenderTestEnvironment.ps1'
 
 function Assert-True {
@@ -33,8 +34,12 @@ if (-not (Test-Path -LiteralPath $blueprintPath -PathType Leaf)) {
 if (-not (Test-Path -LiteralPath $bootstrapPath -PathType Leaf)) {
     throw "Render bootstrap script is missing: $bootstrapPath"
 }
+if (-not (Test-Path -LiteralPath $dockerfilePath -PathType Leaf)) {
+    throw "Render Dockerfile is missing: $dockerfilePath"
+}
 
 $yaml = Get-Content -Raw -LiteralPath $blueprintPath
+$dockerfile = Get-Content -Raw -LiteralPath $dockerfilePath
 Assert-True (($yaml | Select-String -Pattern '(?m)^\s*- type: web\s*$' -AllMatches).Matches.Count -eq 1) 'Blueprint must define exactly one web service.'
 Assert-True (($yaml | Select-String -Pattern '(?m)^databases:\s*$' -AllMatches).Matches.Count -eq 1) 'Blueprint must define a databases section.'
 Assert-True (($yaml | Select-String -Pattern '(?m)^\s*- name: switch-korea-sales-test-db\s*$' -AllMatches).Matches.Count -eq 1) 'Blueprint must define exactly one approved database.'
@@ -48,6 +53,9 @@ Assert-True ($yaml -match '(?m)^\s*postgresMajorVersion: [''"]?18[''"]?\s*$') 'P
 Assert-True ($yaml -match '(?ms)key: DATABASE_URL\s+fromDatabase:\s+name: switch-korea-sales-test-db\s+property: connectionString') 'DATABASE_URL must come from the approved database.'
 Assert-True ($yaml -match '(?ms)key: SWITCHKOREA_HOSTING_MODE\s+value: Render') 'Render hosting mode is missing.'
 Assert-True ($yaml -notmatch 'RENDER_EXTERNAL_HOSTNAME\s*:|key:\s*RENDER_EXTERNAL_HOSTNAME') 'Platform-supplied hostname must not be hardcoded.'
+Assert-True ($dockerfile -match '(?m)^FROM mcr\.microsoft\.com/dotnet/sdk:10\.0 AS backend-build\s*$') 'Dockerfile must use the published .NET 10 SDK tag.'
+Assert-True ($dockerfile -match '(?m)^FROM mcr\.microsoft\.com/dotnet/aspnet:10\.0 AS runtime\s*$') 'Dockerfile must use the published ASP.NET 10 runtime tag.'
+Assert-True ($dockerfile -notmatch 'dotnet/(?:sdk|aspnet):10\.0-bookworm-slim') 'Dockerfile references an unavailable .NET 10 bookworm-slim tag.'
 
 $render = Get-Command render -ErrorAction SilentlyContinue
 if ($render) {

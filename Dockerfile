@@ -5,14 +5,14 @@ RUN corepack enable && corepack prepare pnpm@10.18.0 --activate && pnpm install 
 COPY src/frontend/ ./
 RUN pnpm build
 
-FROM mcr.microsoft.com/dotnet/sdk:10.0-bookworm-slim AS backend-build
+FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
 COPY src/backend/ ./backend/
 RUN dotnet restore backend/SalesManagement.sln
 RUN dotnet publish backend/SalesManagement.Api/SalesManagement.Api.csproj -c Release --no-restore -o /publish/api \
     && dotnet publish backend/SalesManagement.Setup/SalesManagement.Setup.csproj -c Release --no-restore -o /publish/setup
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0-bookworm-slim AS runtime
+FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
 COPY --from=backend-build /publish/api/ /app/
