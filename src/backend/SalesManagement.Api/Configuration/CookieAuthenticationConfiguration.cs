@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
 using SalesManagement.Core.Auth;
 
@@ -24,7 +25,9 @@ public static class CookieAuthenticationConfiguration
         return services;
     }
 
-    private static Task ApplyApiStatusCode(CookieRedirectContext context, int statusCode)
+    private static Task ApplyApiStatusCode(
+        RedirectContext<CookieAuthenticationOptions> context,
+        int statusCode)
     {
         if (context.Request.Path.StartsWithSegments("/api"))
             context.Response.StatusCode = statusCode;
