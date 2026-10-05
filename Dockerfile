@@ -9,6 +9,7 @@ FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
 COPY src/backend/ ./backend/
 RUN dotnet restore backend/SalesManagement.sln
+RUN dotnet test backend/SalesManagement.Tests/SalesManagement.Tests.csproj -c Release --no-restore
 RUN dotnet publish backend/SalesManagement.Api/SalesManagement.Api.csproj -c Release --no-restore -o /publish/api \
     && dotnet publish backend/SalesManagement.Setup/SalesManagement.Setup.csproj -c Release --no-restore -o /publish/setup
 

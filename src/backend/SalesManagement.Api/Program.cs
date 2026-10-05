@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication.Cookies;
 using Microsoft.AspNetCore.Diagnostics.HealthChecks;
 using Microsoft.AspNetCore.Identity;
 using System.Text.Json;
@@ -43,14 +42,7 @@ builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<RateService>();
 builder.Services.AddScoped<TargetService>();
 builder.Services.AddScoped<DashboardService>();
-builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme).AddCookie(options =>
-{
-    options.Cookie.HttpOnly = true;
-    options.Cookie.SameSite = SameSiteMode.Strict;
-    options.Cookie.SecurePolicy = CookieSecurePolicy.Always;
-    options.SlidingExpiration = true;
-    options.ExpireTimeSpan = AuthOptions.Default.SessionIdleTimeout;
-});
+builder.Services.AddSalesCookieAuthentication();
 builder.Services.AddAuthorization();
 
 var app = builder.Build();
