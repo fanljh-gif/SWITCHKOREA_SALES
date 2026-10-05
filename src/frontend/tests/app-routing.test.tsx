@@ -22,3 +22,12 @@ it('renders all seven approved navigation routes', async () => {
     expect(screen.getByRole('link', { name: routeName })).toBeVisible()
   }
 })
+
+it('redirects anonymous users from protected routes to login', async () => {
+  window.history.pushState({}, '', '/dashboard')
+
+  render(<App api={new MockSalesApi({ currentUser: null })} />)
+
+  expect(await screen.findByRole('heading', { name: '로그인' })).toBeVisible()
+  expect(window.location.pathname).toBe('/login')
+})

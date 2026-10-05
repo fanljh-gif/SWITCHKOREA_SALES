@@ -1,5 +1,5 @@
 import { createContext, useContext, type ReactNode } from 'react'
-import { BrowserRouter, Link, Navigate, Route, Routes } from 'react-router-dom'
+import { BrowserRouter, Link, Navigate, Outlet, Route, Routes } from 'react-router-dom'
 
 import type { SalesApi } from '../shared/api/SalesApi'
 import { ChangePasswordPage } from '../features/auth/ChangePasswordPage'
@@ -52,13 +52,15 @@ function AppShell() {
             <Routes>
               <Route path="/login" element={<LoginPage />} />
               <Route path="/change-password" element={<ChangePasswordPage />} />
-              <Route path="/dashboard" element={<DashboardPage />} />
-              <Route path="/customers" element={<CustomerPage />} />
-              <Route path="/catalog" element={<ProductPage />} />
-              <Route path="/shipments" element={<ShipmentPage />} />
-              <Route path="/imports" element={<ImportWizard />} />
-              <Route path="/settings" element={<SettingsPage />} />
-              <Route path="/admin" element={<AdminPage />} />
+              <Route element={<RequireAuthentication />}>
+                <Route path="/dashboard" element={<DashboardPage />} />
+                <Route path="/customers" element={<CustomerPage />} />
+                <Route path="/catalog" element={<ProductPage />} />
+                <Route path="/shipments" element={<ShipmentPage />} />
+                <Route path="/imports" element={<ImportWizard />} />
+                <Route path="/settings" element={<SettingsPage />} />
+                <Route path="/admin" element={<AdminPage />} />
+              </Route>
               <Route path="*" element={<Navigate replace to="/dashboard" />} />
             </Routes>
           </main>
@@ -66,6 +68,20 @@ function AppShell() {
       </div>
     </BrowserRouter>
   )
+}
+
+function RequireAuthentication() {
+  const { currentUser, status } = useAuth()
+
+  if (status === 'loading') {
+    return <p role="status">세션 확인 중입니다.</p>
+  }
+
+  if (status !== 'authenticated' || !currentUser) {
+    return <Navigate replace to="/login" />
+  }
+
+  return <Outlet />
 }
 
 export function App({ api }: { api: SalesApi }) {

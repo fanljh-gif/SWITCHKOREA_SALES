@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { render, screen } from '@testing-library/react'
 
-import { AuthSessionProvider } from '../src/app/AuthSession'
+import { AuthSessionProvider, useAuth } from '../src/app/AuthSession'
 import { MockSalesApi } from '../src/shared/api/MockSalesApi'
 import type { User } from '../src/shared/api/contracts'
 import { PermissionGate } from '../src/shared/ui/PermissionGate'
@@ -35,6 +35,11 @@ function renderEditPermission(currentUser: User, ownerUserId: string) {
   )
 }
 
+function SessionError() {
+  const { error } = useAuth()
+  return error ? <p role="alert">{error}</p> : <p>세션 정상</p>
+}
+
 it('allows members to view all customers but hides edit for another owner', async () => {
   renderEditPermission(member, manager.id)
 
@@ -53,4 +58,26 @@ it('shows edit to the manager regardless of ownership', async () => {
   renderEditPermission(manager, member.id)
 
   expect(await screen.findByRole('button', { name: '수정' })).toBeVisible()
+})
+
+it('clears a stale session error after a successful session check', async () => {
+  const failingApi = new MockSalesApi({ currentUser: null })
+  failingApi.getCurrentUser = async () => { throw new Error('Failed to fetch') }
+  const healthyApi = new MockSalesApi({ currentUser: null })
+
+  const view = render(
+    <AuthSessionProvider api={failingApi}>
+      <SessionError />
+    </AuthSessionProvider>,
+  )
+  expect(await screen.findByRole('alert')).toHaveTextContent('Failed to fetch')
+
+  view.rerender(
+    <AuthSessionProvider api={healthyApi}>
+      <SessionError />
+    </AuthSessionProvider>,
+  )
+
+  expect(await screen.findByText('세션 정상')).toBeVisible()
+  expect(screen.queryByRole('alert')).not.toBeInTheDocument()
 })

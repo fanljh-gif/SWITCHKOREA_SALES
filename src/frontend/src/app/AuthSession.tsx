@@ -23,6 +23,7 @@ export function AuthSessionProvider({ api, children }: { api: SalesApi; children
     let active = true
     void api.getCurrentUser().then((user) => {
       if (!active) return
+      setError(null)
       setCurrentUser(user)
       setStatus(user ? 'authenticated' : 'anonymous')
     }).catch((cause: unknown) => {
