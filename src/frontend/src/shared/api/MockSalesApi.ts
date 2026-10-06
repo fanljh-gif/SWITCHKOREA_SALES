@@ -123,7 +123,7 @@ export class MockSalesApi implements SalesApi {
       { date: '2026-10-01', currency: 'CNY', rate: 187.8, fetchedAt: '2026-10-01T16:30:00+09:00', status: 'success' },
     ]
     this.salesTargets = this.users.map((user, index) => ({ yearMonth: '2026-10', userId: user.id, targetKrw: index === 0 ? 0 : 50_000_000, version: 1 }))
-    this.auditLogs = [{ id: 'a1', actorName: '이재학', occurredAt: '2026-10-01 09:00', target: '적용환율', action: '수정', after: 'USD 1,350 / CNY 188' }]
+    this.auditLogs = [{ id: 'a1', actorName: '이재학', occurredAt: '2026-10-01 09:00', target: '적용환율', action: '수정', after: 'USD 1,350 / CNY 188' }, { id: 'a-network-1', actorName: '최명철', occurredAt: '2026-10-05 14:30', target: '영업망:nc-prospect 새빛정밀', action: '담당자 등록', after: '김현수 / 구매팀' }]
     this.importValidation = options.importValidation ?? { token: 'demo-import', newCount: 0, duplicateCount: 0, changeCandidateCount: 0, errorCount: 0, errors: [], canCommit: true }
   }
 
@@ -145,7 +145,7 @@ export class MockSalesApi implements SalesApi {
   async createUser(input: Omit<User, 'id' | 'version'>): Promise<User> { const row = { ...input, id: crypto.randomUUID() }; this.users.push(row); return row }
   async updateUser(id: string, input: Partial<Omit<User, 'id' | 'version'>> & { version: number }): Promise<User> { const row = await this.getUser(id); Object.assign(row, input); return row }
   async cancelUser(id: string, _version: number): Promise<void> { const row = await this.getUser(id); row.status = 'inactive' }
-  async listAuditLogs(_query?: ListQuery): Promise<AuditLog[]> { return [...this.auditLogs] }
+  async listAuditLogs(query?: ListQuery): Promise<AuditLog[]> { return this.auditLogs.filter((row) => !query?.search || `${row.target} ${row.actorName} ${row.action}`.toLowerCase().includes(query.search.toLowerCase())) }
 
   async listCustomers(_query?: ListQuery): Promise<Customer[]> { return [...this.customers] }
   async getCustomer(id: string): Promise<Customer> { const row = this.customers.find((item) => item.id === id); if (!row) throw new Error('Customer not found'); return row }

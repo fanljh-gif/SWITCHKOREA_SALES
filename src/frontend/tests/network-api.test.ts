@@ -2,8 +2,9 @@ import { describe, expect, it } from 'vitest'
 
 import { SalesApiError } from '../src/shared/api/HttpSalesApi'
 import { MockSalesApi } from '../src/shared/api/MockSalesApi'
+import type { NetworkTreeNode } from '../src/shared/api/contracts'
 
-function flatten(nodes: Awaited<ReturnType<MockSalesApi['getNetworkTree']>>) {
+function flatten(nodes: Awaited<ReturnType<MockSalesApi['getNetworkTree']>>): NetworkTreeNode[] {
   return nodes.flatMap((node) => [node, ...flatten(node.children)])
 }
 

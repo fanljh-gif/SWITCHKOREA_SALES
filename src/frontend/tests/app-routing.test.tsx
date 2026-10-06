@@ -7,6 +7,7 @@ import { MockSalesApi } from '../src/shared/api/MockSalesApi'
 const approvedRoutes = [
   '대시보드',
   '거래처 관리',
+  '영업망 관리',
   '품목·단가 관리',
   '출고·매출 관리',
   'Excel 가져오기',
@@ -14,7 +15,7 @@ const approvedRoutes = [
   '시스템 관리',
 ]
 
-it('renders all seven approved navigation routes', async () => {
+it('renders all approved navigation routes', async () => {
   render(<App api={new MockSalesApi()} />)
 
   expect(await screen.findByRole('heading', { name: '대시보드' })).toBeVisible()
