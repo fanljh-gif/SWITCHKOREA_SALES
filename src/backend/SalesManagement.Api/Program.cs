@@ -12,6 +12,7 @@ using SalesManagement.Core.Dashboard;
 using SalesManagement.Core.Exceptions;
 using SalesManagement.Core.Imports;
 using SalesManagement.Core.Models;
+using SalesManagement.Core.Network;
 using SalesManagement.Core.Prices;
 using SalesManagement.Core.Products;
 using SalesManagement.Core.Rates;
@@ -42,6 +43,11 @@ builder.Services.AddScoped<ExcelImportService>();
 builder.Services.AddScoped<RateService>();
 builder.Services.AddScoped<TargetService>();
 builder.Services.AddScoped<DashboardService>();
+builder.Services.AddScoped<NetworkCompanyService>();
+builder.Services.AddScoped<NetworkRelationshipService>();
+builder.Services.AddScoped<NetworkTreeService>();
+builder.Services.AddScoped<CompanyContactService>();
+builder.Services.AddScoped<CompanyAssignmentService>();
 builder.Services.AddSalesCookieAuthentication();
 builder.Services.AddAuthorization();
 
@@ -53,10 +59,14 @@ app.UseStaticFiles();
 app.Use(async (context, next) =>
 {
     try { await next(); }
-    catch (ForbiddenException exception) { context.Response.StatusCode = StatusCodes.Status403Forbidden; await context.Response.WriteAsJsonAsync(new { title = exception.Message, status = 403 }); }
     catch (PricePeriodConflictException exception) { context.Response.StatusCode = StatusCodes.Status409Conflict; await context.Response.WriteAsJsonAsync(new { title = exception.Message, status = 409 }); }
     catch (InvalidImportBatchException exception) { context.Response.StatusCode = StatusCodes.Status422UnprocessableEntity; await context.Response.WriteAsJsonAsync(new { title = exception.Message, status = 422 }); }
-    catch (ConcurrencyException exception) { context.Response.StatusCode = StatusCodes.Status409Conflict; await context.Response.WriteAsJsonAsync(new { title = "다른 사용자가 먼저 수정했습니다.", status = 409, detail = exception.Message }); }
+    catch (Exception exception) when (NetworkProblemMapper.CanMap(exception))
+    {
+        var problem = NetworkProblemMapper.Map(exception);
+        context.Response.StatusCode = problem.Status;
+        await context.Response.WriteAsJsonAsync(new { title = problem.Title, status = problem.Status, detail = problem.Detail });
+    }
 });
 app.UseAuthentication();
 app.UseAuthorization();
@@ -72,6 +82,7 @@ app.MapRateTargetEndpoints();
 app.MapDashboardEndpoints();
 app.MapImportEndpoints();
 app.MapAdminEndpoints();
+app.MapNetworkEndpoints();
 app.MapFallbackToFile("index.html");
 app.Run();
 

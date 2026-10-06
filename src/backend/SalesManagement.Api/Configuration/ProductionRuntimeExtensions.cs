@@ -60,6 +60,15 @@ public static class ProductionRuntimeExtensions
         services.AddSingleton<ITargetRepository, InMemoryTargetRepository>();
         services.AddSingleton<IAuditRepository, InMemoryAuditRepository>();
         services.AddSingleton<IImportBatchRepository, InMemoryImportBatchRepository>();
+        services.AddSingleton<INetworkCompanyRepository, InMemoryNetworkCompanyRepository>();
+        services.AddSingleton<ICompanyRelationshipRepository, InMemoryCompanyRelationshipRepository>();
+        services.AddSingleton<ICompanyContactRepository, InMemoryCompanyContactRepository>();
+        services.AddSingleton<ICompanyAssignmentRepository, InMemoryCompanyAssignmentRepository>();
+        services.AddSingleton<ITransactionRunner>(provider => new InMemoryTransactionRunner(
+            (IInMemoryTransactionalStore)provider.GetRequiredService<INetworkCompanyRepository>(),
+            (IInMemoryTransactionalStore)provider.GetRequiredService<ICompanyAssignmentRepository>(),
+            (IInMemoryTransactionalStore)provider.GetRequiredService<ICustomerRepository>(),
+            (IInMemoryTransactionalStore)provider.GetRequiredService<IAuditRepository>()));
     }
 }
 
