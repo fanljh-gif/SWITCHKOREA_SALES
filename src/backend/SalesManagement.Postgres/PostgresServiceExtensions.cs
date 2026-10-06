@@ -13,6 +13,10 @@ public static class PostgresServiceExtensions
         services.AddScoped<IShipmentRepository, ShipmentRepository>(); services.AddScoped<IRateRepository, RateRepository>();
         services.AddScoped<ITargetRepository, TargetRepository>(); services.AddScoped<IImportBatchRepository, ImportBatchRepository>();
         services.AddScoped<IAuditRepository, AuditRepository>(); services.AddScoped<ITransactionRunner, PostgresTransactionRunner>();
+        services.AddScoped<INetworkCompanyRepository, NetworkCompanyRepository>();
+        services.AddScoped<ICompanyRelationshipRepository, CompanyRelationshipRepository>();
+        services.AddScoped<ICompanyContactRepository, CompanyContactRepository>();
+        services.AddScoped<ICompanyAssignmentRepository, CompanyAssignmentRepository>();
         return services;
     }
 }

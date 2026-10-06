@@ -17,6 +17,11 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : D
     public DbSet<SalesTarget> SalesTargets => Set<SalesTarget>();
     public DbSet<ImportBatch> ImportBatches => Set<ImportBatch>();
     public DbSet<AuditEntry> AuditEntries => Set<AuditEntry>();
+    public DbSet<NetworkCompany> NetworkCompanies => Set<NetworkCompany>();
+    public DbSet<CompanyRelationship> CompanyRelationships => Set<CompanyRelationship>();
+    public DbSet<RelationshipSupply> RelationshipSupplies => Set<RelationshipSupply>();
+    public DbSet<CompanyContact> CompanyContacts => Set<CompanyContact>();
+    public DbSet<CompanyAssignment> CompanyAssignments => Set<CompanyAssignment>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyConfigurationsFromAssembly(typeof(SalesDbContext).Assembly);
 
