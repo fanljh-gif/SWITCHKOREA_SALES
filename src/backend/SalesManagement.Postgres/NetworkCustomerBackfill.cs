@@ -32,7 +32,7 @@ public sealed class NetworkCustomerBackfill(SalesDbContext db)
                 db.CompanyAssignments.Add(new CompanyAssignment
                 {
                     Id = companyId, CompanyId = companyId, UserId = customer.OwnerUserId,
-                    ValidFrom = DateOnly.FromDateTime(customer.CreatedAt.UtcDateTime), IsCurrent = true,
+                    ValidFrom = SalesManagement.Core.Network.SeoulBusinessDate.FromUtc(customer.CreatedAt), IsCurrent = true,
                     CreatedAt = customer.CreatedAt, UpdatedAt = customer.UpdatedAt,
                 });
                 assignedCompanyIds.Add(companyId);

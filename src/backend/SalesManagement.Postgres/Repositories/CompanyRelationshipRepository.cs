@@ -26,16 +26,30 @@ public sealed class CompanyRelationshipRepository(SalesDbContext db) : EfReposit
         tracked.ValidTo = entity.ValidTo;
         tracked.Notes = entity.Notes;
         tracked.Status = entity.Status;
-        Db.RelationshipSupplies.RemoveRange(tracked.Supplies);
-        tracked.Supplies = entity.Supplies.Select(x => new RelationshipSupply
+        var incoming = entity.Supplies.ToDictionary(x => x.Id);
+        foreach (var existing in tracked.Supplies.ToArray())
         {
-            Id = x.Id,
-            RelationshipId = tracked.Id,
-            ProductId = x.ProductId,
-            ApplicationName = x.ApplicationName,
-            Notes = x.Notes,
-        }).ToList();
-        foreach (var supply in tracked.Supplies) Db.Entry(supply).State = EntityState.Added;
+            if (incoming.Remove(existing.Id, out var replacement))
+            {
+                existing.ProductId = replacement.ProductId;
+                existing.ApplicationName = replacement.ApplicationName;
+                existing.Notes = replacement.Notes;
+            }
+            else Db.RelationshipSupplies.Remove(existing);
+        }
+        foreach (var replacement in incoming.Values)
+        {
+            var supply = new RelationshipSupply
+            {
+                Id = replacement.Id,
+                RelationshipId = tracked.Id,
+                ProductId = replacement.ProductId,
+                ApplicationName = replacement.ApplicationName,
+                Notes = replacement.Notes,
+            };
+            tracked.Supplies.Add(supply);
+            Db.Entry(supply).State = EntityState.Added;
+        }
         try
         {
             await Db.SaveChangesAsync(ct);

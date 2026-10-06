@@ -48,6 +48,7 @@ public sealed class EndToEndTests
         Assert.Equal(2, await db.CompanyAssignments.CountAsync());
         Assert.Equal(new[] { first.Id, second.Id }.Order(), await db.NetworkCompanies.Select(x => x.CustomerId!.Value).OrderBy(x => x).ToArrayAsync());
         Assert.All(await db.CompanyAssignments.ToArrayAsync(), x => Assert.Equal(owner.Id, x.UserId));
+        Assert.All(await db.CompanyAssignments.ToArrayAsync(), x => Assert.Equal(DateOnly.FromDateTime(DateTime.UtcNow.AddHours(9)), x.ValidFrom));
         Assert.Contains(await db.CompanyAssignments.ToArrayAsync(), x => x.CompanyId == existingNetwork.Id);
     }
 
