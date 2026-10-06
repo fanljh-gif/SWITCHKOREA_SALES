@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>스위치코리아 영업관리 — SWITCH KOREA</title>
-  <link rel="stylesheet" href="styles.css?v=3">
+  <link rel="stylesheet" href="styles.css?v=4">
 </head>
 <body>
   <section class="login-screen" id="login-screen" aria-label="로그인">
@@ -50,6 +50,7 @@
         <button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span><span>대시보드</span></button>
         <p class="nav-section">SALES</p>
         <button class="nav-item" data-view="customers"><span class="nav-icon">◇</span><span>거래처 관리</span></button>
+        <button class="nav-item" data-view="network"><span class="nav-icon">⑂</span><span>영업망 관리</span></button>
         <button class="nav-item" data-view="catalog"><span class="nav-icon">▦</span><span>품목·단가 관리</span></button>
         <button class="nav-item" data-view="shipments"><span class="nav-icon">→</span><span>출고·매출 관리</span><span class="nav-badge">3</span></button>
         <button class="nav-item" data-view="imports"><span class="nav-icon">⇧</span><span>Excel 가져오기</span></button>
@@ -119,6 +120,41 @@
           <article class="panel table-panel"><div class="table-toolbar"><div class="search-input">⌕<input placeholder="거래처명 또는 코드 검색"></div><select><option>전체 국가</option><option>대한민국</option><option>미국</option><option>중국</option></select><select><option>전체 담당자</option><option>박태원</option><option>최명철</option><option>이소연</option><option>이창선</option></select><button class="button secondary">필터 초기화</button></div><div class="table-wrap"><table><thead><tr><th>거래처 코드</th><th>거래처명</th><th>국가</th><th>기본 통화</th><th>담당자</th><th class="right">당월 매출</th><th>상태</th><th></th></tr></thead><tbody id="customer-table"></tbody></table></div><div class="pagination"><span>총 25개 중 1–5</span><div><button disabled>‹</button><button class="active">1</button><button>2</button><button>3</button><button>›</button></div></div></article>
         </section>
 
+        <section class="view" id="view-network" data-title="영업망 관리">
+          <div id="network-view">
+            <div class="section-header"><div><p class="eyebrow">SALES NETWORK</p><h2>영업망 관리</h2><p>원청부터 하위 협력사까지 계보와 담당자 변경 이력을 관리합니다.</p></div><button class="button primary" data-network-dialog="networkCompany" data-network-company-mode="create">+ 기업 등록</button></div>
+            <div class="network-filter-bar">
+              <label>원청사<select id="network-root-filter"><option value="nc-samsung">삼성전자</option><option value="nc-lg">LG전자</option></select></label>
+              <label>회사 구분<select id="network-lifecycle-filter"><option value="all">전체</option><option value="oem">원청</option><option value="customer">정식 거래처</option><option value="prospect">잠재 협력사</option></select></label>
+              <label>당사 담당자<select id="network-owner-filter"><option value="all">전체 담당자</option><option value="u1">이재학</option><option value="u2">박태원</option><option value="u3">최명철</option><option value="u4">이소연</option><option value="u5">이창선</option></select></label>
+              <label>상태<select id="network-status-filter"><option value="all">전체 상태</option><option value="active">활성</option><option value="inactive">비활성</option></select></label>
+              <div class="search-input network-search">⌕<input id="network-search" placeholder="기업명 또는 코드 검색"></div>
+            </div>
+            <div class="network-layout">
+              <article class="panel network-tree-panel">
+                <div class="panel-head"><div><h3>협력사 계보도</h3><p>기업을 선택하면 상세정보가 표시됩니다.</p></div><span class="network-count" id="network-company-count">0개 기업</span></div>
+                <div class="network-tree" id="network-tree"></div>
+              </article>
+              <article class="panel network-detail">
+                <div class="network-company-detail" id="network-company-detail"></div>
+                <div class="network-tabs" role="tablist">
+                  <button class="active" data-network-tab="basic">기본정보</button>
+                  <button data-network-tab="relationships">관계·공급</button>
+                  <button data-network-tab="contacts">거래처 담당자</button>
+                  <button data-network-tab="assignments">당사 담당 이력</button>
+                  <button data-network-tab="history">변경 이력</button>
+                </div>
+                <div class="network-tab-content active" id="network-basic-tab"></div>
+                <div class="network-tab-content" id="network-relationship-tab"></div>
+                <div class="network-tab-content" id="network-contact-tab"></div>
+                <div class="network-tab-content" id="network-assignment-tab"></div>
+                <div class="network-tab-content" id="network-history-tab"></div>
+                <button class="button secondary manager-only is-hidden" id="convert-prospect">정식 거래처로 전환</button>
+              </article>
+            </div>
+          </div>
+        </section>
+
         <section class="view" id="view-catalog" data-title="품목·단가 관리">
           <div class="section-header"><div><p class="eyebrow">PRODUCT & PRICING</p><h2>품목·단가 관리</h2><p>표준 품목과 거래처별 판매단가를 관리합니다.</p></div><button class="button primary" data-action="open-dialog" data-dialog="product">+ 새로 등록</button></div>
           <div class="tab-row"><button class="tab active" data-tab="products">품목 목록 <span>42</span></button><button class="tab" data-tab="prices">거래처별 단가 <span>87</span></button><button class="tab" data-tab="history">단가 변경 이력</button></div>
@@ -179,7 +215,7 @@
 
   <div class="toast is-hidden" id="toast"><span>✓</span><p id="toast-message">처리되었습니다.</p></div>
 
-  <script src="mock-data.js?v=3"></script>
-  <script src="app.js?v=3"></script>
+  <script src="mock-data.js?v=4"></script>
+  <script src="app.js?v=4"></script>
 </body>
 </html>

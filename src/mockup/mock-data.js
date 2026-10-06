@@ -54,5 +54,40 @@ window.SALES_MOCK_DATA = {
     { at: "2026-09-30 16:41", user: "이재학", action: "환율 변경", target: "2026-10 CNY", detail: "186.50 → 188.00" },
     { at: "2026-09-30 16:40", user: "이재학", action: "환율 변경", target: "2026-10 USD", detail: "1,340.00 → 1,350.00" },
     { at: "2026-09-30 14:22", user: "이재학", action: "담당자 변경", target: "한빛오토텍", detail: "이소연 → 이창선" }
+  ],
+  networkCompanies: [
+    { id: "nc-samsung", name: "삼성전자", code: "OEM-001", country: "대한민국", industry: "전자", lifecycleType: "customer", isOem: true, ownerId: "u1", owner: "이재학", status: "active", address: "경기도 수원시", note: "주요 원청사" },
+    { id: "nc-lg", name: "LG전자", code: "OEM-002", country: "대한민국", industry: "전자", lifecycleType: "customer", isOem: true, ownerId: "u1", owner: "이재학", status: "active", address: "서울특별시 영등포구", note: "주요 원청사" },
+    { id: "nc-a", name: "대성전자", code: "C-1001", country: "대한민국", industry: "전자부품", lifecycleType: "customer", isOem: false, customerId: "c1", ownerId: "u2", owner: "박태원", status: "active", address: "경기도 화성시", note: "삼성·LG 공통 1차 협력사" },
+    { id: "nc-b", name: "세진모듈", code: "P-2001", country: "대한민국", industry: "모듈", lifecycleType: "prospect", isOem: false, ownerId: "u3", owner: "최명철", status: "active", address: "충청남도 아산시", note: "신규 스위치 적용 검토 중" },
+    { id: "nc-c", name: "한빛정밀", code: "P-2002", country: "대한민국", industry: "정밀가공", lifecycleType: "prospect", isOem: false, ownerId: "u2", owner: "박태원", status: "active", address: "경기도 안산시", note: "대성전자 추천 잠재고객" },
+    { id: "nc-d", name: "한빛오토텍", code: "C-1004", country: "대한민국", industry: "자동차 전장", lifecycleType: "customer", isOem: false, customerId: "c4", ownerId: "u5", owner: "이창선", status: "active", address: "경기도 평택시", note: "차량용 스위치 납품" },
+    { id: "nc-e", name: "미래하네스", code: "P-2003", country: "대한민국", industry: "와이어링", lifecycleType: "prospect", isOem: false, ownerId: "u4", owner: "이소연", status: "active", address: "경상북도 구미시", note: "하위 공급망 후보" }
+  ],
+  networkRelationships: [
+    { id: "nr1", upstreamId: "nc-samsung", downstreamId: "nc-a", productIds: ["p1", "p2"], application: "생활가전 조작부", validFrom: "2024-01-01", validTo: "-", status: "active", notes: "양산 적용" },
+    { id: "nr2", upstreamId: "nc-samsung", downstreamId: "nc-b", productIds: ["p2"], application: "세탁기 도어", validFrom: "2026-05-01", validTo: "-", status: "active", notes: "샘플 평가" },
+    { id: "nr3", upstreamId: "nc-lg", downstreamId: "nc-a", productIds: ["p4"], application: "공조기", validFrom: "2025-03-01", validTo: "-", status: "active", notes: "공통 협력사" },
+    { id: "nr4", upstreamId: "nc-a", downstreamId: "nc-c", productIds: ["p1"], application: "조작부 ASSY", validFrom: "2026-02-01", validTo: "-", status: "active", notes: "개발 협력" },
+    { id: "nr5", upstreamId: "nc-c", downstreamId: "nc-d", productIds: ["p3"], application: "차량용 콘솔", validFrom: "2026-04-01", validTo: "-", status: "active", notes: "승인 완료" },
+    { id: "nr6", upstreamId: "nc-d", downstreamId: "nc-e", productIds: ["p5"], application: "하네스 모듈", validFrom: "2026-08-01", validTo: "-", status: "active", notes: "견적 협의" }
+  ],
+  networkContacts: [
+    { id: "nct1", companyId: "nc-a", name: "김현수", department: "구매팀", position: "부장", role: "구매 의사결정", mobile: "010-2345-6789", email: "hskim@daesung.example", validFrom: "2025-01-01", validTo: "-", employmentStatus: "재직" },
+    { id: "nct2", companyId: "nc-a", name: "정다은", department: "개발팀", position: "책임", role: "기술 검토", mobile: "010-3456-7890", email: "dajung@daesung.example", validFrom: "2026-03-01", validTo: "-", employmentStatus: "재직" },
+    { id: "nct3", companyId: "nc-a", name: "오민석", department: "구매팀", position: "차장", role: "구매 실무", mobile: "-", email: "-", validFrom: "2023-01-01", validTo: "2024-12-31", employmentStatus: "퇴사" },
+    { id: "nct4", companyId: "nc-b", name: "박지영", department: "개발구매", position: "과장", role: "샘플 평가", mobile: "010-4567-8901", email: "jypark@sejin.example", validFrom: "2026-05-01", validTo: "-", employmentStatus: "재직" }
+  ],
+  networkAssignments: [
+    { id: "na1", companyId: "nc-a", ownerId: "u2", owner: "박태원", validFrom: "2026-01-01", validTo: "-", reason: "권역 재조정", current: true },
+    { id: "na2", companyId: "nc-a", ownerId: "u4", owner: "이소연", validFrom: "2024-01-01", validTo: "2025-12-31", reason: "담당자 변경", current: false },
+    { id: "na3", companyId: "nc-b", ownerId: "u3", owner: "최명철", validFrom: "2026-05-01", validTo: "-", reason: "신규 발굴", current: true },
+    { id: "na4", companyId: "nc-c", ownerId: "u2", owner: "박태원", validFrom: "2026-02-01", validTo: "-", reason: "연계 영업", current: true }
+  ],
+  networkHistory: [
+    { companyId: "nc-a", at: "2026-10-02 11:20", user: "박태원", action: "담당자 연락처 수정", detail: "김현수 부장 휴대폰 변경" },
+    { companyId: "nc-a", at: "2026-09-18 15:10", user: "이재학", action: "협력 관계 수정", detail: "LG전자 공조기 프로젝트 추가" },
+    { companyId: "nc-a", at: "2026-01-01 09:00", user: "이재학", action: "당사 담당자 변경", detail: "이소연 → 박태원" },
+    { companyId: "nc-b", at: "2026-10-01 10:35", user: "최명철", action: "잠재고객 등록", detail: "세진모듈 신규 등록" }
   ]
 };
