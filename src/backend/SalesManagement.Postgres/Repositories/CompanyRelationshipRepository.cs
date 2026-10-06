@@ -7,7 +7,7 @@ namespace SalesManagement.Postgres.Repositories;
 public sealed class CompanyRelationshipRepository(SalesDbContext db) : EfRepository<CompanyRelationship>(db), ICompanyRelationshipRepository
 {
     public override async Task<IReadOnlyList<CompanyRelationship>> ListAsync(CancellationToken ct = default) =>
-        await Db.CompanyRelationships.AsNoTracking().Include(x => x.Supplies).OrderBy(x => x.CreatedAt).ToArrayAsync(ct);
+        (await Db.CompanyRelationships.AsNoTracking().Include(x => x.Supplies).ToArrayAsync(ct)).OrderBy(x => x.CreatedAt).ToArray();
 
     public override Task<CompanyRelationship?> GetAsync(Guid id, CancellationToken ct = default) =>
         Db.CompanyRelationships.AsNoTracking().Include(x => x.Supplies).SingleOrDefaultAsync(x => x.Id == id, ct);

@@ -33,7 +33,10 @@ await using var provider = services.BuildServiceProvider();
 await using var scope = provider.CreateAsyncScope();
 var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
 if (migrate)
+{
     await db.Database.MigrateAsync();
+    await new NetworkCustomerBackfill(db).ApplyAsync();
+}
 
 if (migrateOnly)
 {

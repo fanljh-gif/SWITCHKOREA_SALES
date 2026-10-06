@@ -83,6 +83,164 @@ namespace SalesManagement.Postgres.Migrations
                     b.ToTable("audit_entries", (string)null);
                 });
 
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyAssignment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<bool>("IsCurrent")
+                        .HasColumnType("boolean");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId")
+                        .IsUnique()
+                        .HasFilter("\"IsCurrent\"");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CompanyId", "ValidFrom")
+                        .IsUnique();
+
+                    b.ToTable("company_assignments", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyContact", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("BusinessRole")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid>("CompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Department")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<string>("Email")
+                        .IsRequired()
+                        .HasMaxLength(320)
+                        .HasColumnType("character varying(320)");
+
+                    b.Property<string>("EmploymentStatus")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("MobilePhone")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Position")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.ToTable("company_contacts", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyRelationship", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("DownstreamCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("UpstreamCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateOnly>("ValidFrom")
+                        .HasColumnType("date");
+
+                    b.Property<DateOnly?>("ValidTo")
+                        .HasColumnType("date");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DownstreamCompanyId");
+
+                    b.HasIndex("UpstreamCompanyId", "DownstreamCompanyId", "ValidFrom")
+                        .IsUnique()
+                        .HasFilter("\"Status\" = 'Active'");
+
+                    b.ToTable("company_relationships", (string)null);
+                });
+
             modelBuilder.Entity("SalesManagement.Core.Models.Customer", b =>
                 {
                     b.Property<Guid>("Id")
@@ -270,6 +428,65 @@ namespace SalesManagement.Postgres.Migrations
                     b.ToTable("monthly_rates", (string)null);
                 });
 
+            modelBuilder.Entity("SalesManagement.Core.Models.NetworkCompany", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("CurrentOwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid?>("CustomerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Industry")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<bool>("IsOem")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("LifecycleType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CurrentOwnerUserId");
+
+                    b.HasIndex("CustomerId")
+                        .IsUnique()
+                        .HasFilter("\"CustomerId\" IS NOT NULL");
+
+                    b.ToTable("network_companies", (string)null);
+                });
+
             modelBuilder.Entity("SalesManagement.Core.Models.Price", b =>
                 {
                     b.Property<Guid>("Id")
@@ -362,6 +579,47 @@ namespace SalesManagement.Postgres.Migrations
                         {
                             t.HasCheckConstraint("CK_products_item_type", "\"ItemType\" IN ('Product','Goods')");
                         });
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.RelationshipSupply", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ApplicationName")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Notes")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("ProductId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("RelationshipId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProductId");
+
+                    b.HasIndex("RelationshipId", "ProductId", "ApplicationName")
+                        .IsUnique();
+
+                    b.ToTable("relationship_supplies", (string)null);
                 });
 
             modelBuilder.Entity("SalesManagement.Core.Models.SalesTarget", b =>
@@ -546,6 +804,45 @@ namespace SalesManagement.Postgres.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyAssignment", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.NetworkCompany", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyContact", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.NetworkCompany", null)
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyRelationship", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.NetworkCompany", null)
+                        .WithMany()
+                        .HasForeignKey("DownstreamCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.NetworkCompany", null)
+                        .WithMany()
+                        .HasForeignKey("UpstreamCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SalesManagement.Core.Models.Customer", b =>
                 {
                     b.HasOne("SalesManagement.Core.Models.User", null)
@@ -573,6 +870,20 @@ namespace SalesManagement.Postgres.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SalesManagement.Core.Models.NetworkCompany", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("CurrentOwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.Customer", null)
+                        .WithMany()
+                        .HasForeignKey("CustomerId")
+                        .OnDelete(DeleteBehavior.Restrict);
+                });
+
             modelBuilder.Entity("SalesManagement.Core.Models.Price", b =>
                 {
                     b.HasOne("SalesManagement.Core.Models.Customer", null)
@@ -585,6 +896,21 @@ namespace SalesManagement.Postgres.Migrations
                         .WithMany()
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.RelationshipSupply", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.Product", null)
+                        .WithMany()
+                        .HasForeignKey("ProductId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.CompanyRelationship", null)
+                        .WithMany("Supplies")
+                        .HasForeignKey("RelationshipId")
+                        .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
                 });
 
@@ -616,6 +942,11 @@ namespace SalesManagement.Postgres.Migrations
                         .HasForeignKey("ProductId")
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.CompanyRelationship", b =>
+                {
+                    b.Navigation("Supplies");
                 });
 #pragma warning restore 612, 618
         }
