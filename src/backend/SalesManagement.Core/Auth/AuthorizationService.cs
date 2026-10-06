@@ -21,4 +21,12 @@ public static class AuthorizationService
         EnsureActive(actor);
         if (actor.Role != Role.Manager && customer.OwnerUserId != actor.Id) throw new ForbiddenException();
     }
+
+    public static void EnsureCanEditNetworkCompany(User actor, NetworkCompany company, CompanyAssignment? currentAssignment)
+    {
+        EnsureActive(actor);
+        if (actor.Role == Role.Manager) return;
+        var ownerId = currentAssignment is { IsCurrent: true } ? currentAssignment.UserId : company.CurrentOwnerUserId;
+        if (ownerId != actor.Id) throw new ForbiddenException();
+    }
 }

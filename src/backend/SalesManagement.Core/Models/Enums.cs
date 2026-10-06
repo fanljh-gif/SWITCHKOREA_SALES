@@ -8,3 +8,5 @@ public enum ShipmentStatus { Confirmed, Cancelled }
 public enum RateFetchStatus { Success, Failed }
 public enum ImportKind { Customer, Product, Price, Shipment }
 public enum ImportStatus { Validating, Ready, Committed, Rejected }
+public enum LifecycleType { Customer, Prospect }
+public enum EmploymentStatus { Active, Former }

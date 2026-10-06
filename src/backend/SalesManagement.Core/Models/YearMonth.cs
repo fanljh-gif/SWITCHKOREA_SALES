@@ -1,7 +1,10 @@
+using System.Text.Json.Serialization;
+
 namespace SalesManagement.Core.Models;
 
 public readonly record struct YearMonth
 {
+    [JsonConstructor]
     public YearMonth(int year, int month)
     {
         if (year is < 1 or > 9999) throw new ArgumentOutOfRangeException(nameof(year));
