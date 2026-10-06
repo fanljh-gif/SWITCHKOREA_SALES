@@ -2,6 +2,7 @@ using SalesManagement.Core.Auth;
 using SalesManagement.Core.Exceptions;
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Repositories;
+using System.Text.Json;
 
 namespace SalesManagement.Core.Network;
 
@@ -21,8 +22,11 @@ public sealed class NetworkCompanyService(INetworkCompanyRepository companies, I
         Validate(command.CompanyName, command.Country, command.Industry);
         if (command.Id is null)
         {
-            if (command.LifecycleType != LifecycleType.Prospect)
+            var createsOem = actor.Role == Role.Manager && command.IsOem && command.LifecycleType == LifecycleType.Customer;
+            if (command.LifecycleType != LifecycleType.Prospect && !createsOem)
                 throw new NetworkValidationException("정식 거래처는 잠재고객 전환 또는 데이터 이관으로만 생성할 수 있습니다.");
+            if (command.IsOem && command.LifecycleType != LifecycleType.Customer)
+                throw new NetworkValidationException("원청은 정식 거래처 구분으로 등록해야 합니다.");
             if (actor.Role != Role.Manager && (command.IsOem || command.OwnerUserId != actor.Id))
                 throw new ForbiddenException("팀원은 본인 담당 잠재고객만 등록할 수 있습니다.");
             await EnsureActiveOwner(command.OwnerUserId, ct);
@@ -34,8 +38,8 @@ public sealed class NetworkCompanyService(INetworkCompanyRepository companies, I
                     LifecycleType = command.LifecycleType, IsOem = command.IsOem,
                     CurrentOwnerUserId = command.OwnerUserId, Status = command.Status,
                 }, token);
-                await assignments.AddAsync(new CompanyAssignment { CompanyId = company.Id, UserId = command.OwnerUserId, ValidFrom = DateOnly.FromDateTime(DateTime.UtcNow), IsCurrent = true }, token);
-                await audits.AddAsync(new AuditEntry { ActorUserId = actor.Id, Target = company.Id.ToString(), Action = "Created", AfterJson = $"{{\"CompanyName\":\"{company.CompanyName}\",\"LifecycleType\":\"{company.LifecycleType}\"}}" }, token);
+                await assignments.AddAsync(new CompanyAssignment { CompanyId = company.Id, UserId = command.OwnerUserId, ValidFrom = SeoulBusinessDate.Today(), IsCurrent = true }, token);
+                await audits.AddAsync(new AuditEntry { ActorUserId = actor.Id, Target = company.Id.ToString(), Action = "Created", AfterJson = JsonSerializer.Serialize(new { company.CompanyName, LifecycleType = company.LifecycleType.ToString() }) }, token);
                 return company;
             }, ct);
         }
@@ -54,7 +58,7 @@ public sealed class NetworkCompanyService(INetworkCompanyRepository companies, I
         existing.CompanyName = command.CompanyName.Trim(); existing.Country = command.Country.Trim(); existing.Industry = command.Industry.Trim(); existing.Status = command.Status;
         var saved = await companies.UpdateAsync(existing, expectedVersion, ct);
         await audits.AddAsync(new AuditEntry { ActorUserId = actor.Id, Target = existing.Id.ToString(), Action = "Updated",
-            AfterJson = $"{{\"CompanyName\":\"{saved.CompanyName}\",\"Country\":\"{saved.Country}\",\"Industry\":\"{saved.Industry}\",\"Status\":\"{saved.Status}\"}}" }, ct);
+            AfterJson = JsonSerializer.Serialize(new { saved.CompanyName, saved.Country, saved.Industry, Status = saved.Status.ToString() }) }, ct);
         return saved;
     }
 

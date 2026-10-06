@@ -3,6 +3,8 @@ using SalesManagement.Core.Models;
 using SalesManagement.Core.Network;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace SalesManagement.Api.Endpoints;
 
@@ -131,14 +133,19 @@ public sealed record NetworkProblem(int Status, string Title, string? Detail = n
 
 public static class NetworkProblemMapper
 {
-    public static bool CanMap(Exception exception) => exception is ForbiddenException or KeyNotFoundException or ConcurrencyException or NetworkRelationshipConflictException or NetworkValidationException;
+    public static bool CanMap(Exception exception) => exception is UnauthorizedAccessException or ForbiddenException or KeyNotFoundException or ConcurrencyException or NetworkRelationshipConflictException or NetworkValidationException || IsConstraintViolation(exception);
     public static NetworkProblem Map(Exception exception) => exception switch
     {
+        UnauthorizedAccessException => new(401, "로그인이 필요하거나 사용자 계정을 확인할 수 없습니다."),
         ForbiddenException => new(403, exception.Message),
         KeyNotFoundException => new(404, exception.Message),
         ConcurrencyException => new(409, "다른 사용자가 먼저 수정했습니다.", exception.Message),
         NetworkRelationshipConflictException => new(409, exception.Message),
+        DbUpdateException dbException when IsConstraintViolation(dbException) => new(409, "다른 요청과 충돌했거나 중복된 데이터입니다. 새로고침 후 다시 시도해 주세요."),
         NetworkValidationException => new(422, exception.Message),
         _ => throw new ArgumentOutOfRangeException(nameof(exception)),
     };
+
+    private static bool IsConstraintViolation(Exception exception) =>
+        exception is DbUpdateException { InnerException: PostgresException postgres } && postgres.SqlState.StartsWith("23", StringComparison.Ordinal);
 }

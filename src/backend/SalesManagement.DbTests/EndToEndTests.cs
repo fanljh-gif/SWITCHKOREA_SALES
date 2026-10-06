@@ -77,7 +77,7 @@ public sealed class EndToEndTests
         await contactService.SaveContactAsync(prospect.Id, new(null, "김담당", "구매", "과장", "구매", "010-0000-0000", "buyer@example.com", new DateOnly(2026, 1, 1), null, EmploymentStatus.Active), manager);
         prospect = await companyService.ConvertProspectAsync(prospect.Id, "C900", Currency.KRW, prospect.Version, manager);
         var assignmentService = new CompanyAssignmentService(assignments, companies, users, customers, audits, runner);
-        await assignmentService.ChangeAssignmentAsync(prospect.Id, nextOwner.Id, DateOnly.FromDateTime(DateTime.UtcNow).AddDays(1), prospect.Version, manager);
+        await assignmentService.ChangeAssignmentAsync(prospect.Id, nextOwner.Id, DateOnly.FromDateTime(DateTime.UtcNow.AddHours(9)).AddDays(1), prospect.Version, manager);
 
         db.ChangeTracker.Clear();
         Assert.Equal(2, await db.CompanyRelationships.CountAsync(x => x.DownstreamCompanyId == prospect.Id));

@@ -173,6 +173,29 @@ public sealed class PostgresConstraintTests
         await Assert.ThrowsAsync<NetworkValidationException>(() => repository.AddAsync(new CompanyAssignment { CompanyId = company.Id, UserId = owner.Id, ValidFrom = new DateOnly(2026, 6, 1), ValidTo = new DateOnly(2027, 1, 1), IsCurrent = false }));
     }
 
+    [Fact]
+    public async Task Relationship_Repository_Update_Replaces_Supplies()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var owner = await fixture.AddUser();
+        var up = NetworkCompany("Up", owner.Id); var down = NetworkCompany("Down", owner.Id);
+        var firstProduct = new Product { Code = "P001", Name = "스위치 1", ItemType = ItemType.Product };
+        var secondProduct = new Product { Code = "P002", Name = "스위치 2", ItemType = ItemType.Product };
+        fixture.Context.AddRange(up, down, firstProduct, secondProduct); await fixture.Context.SaveChangesAsync();
+        var repository = new CompanyRelationshipRepository(fixture.Context);
+        var relationship = Relationship(up.Id, down.Id);
+        relationship.Supplies = [new RelationshipSupply { RelationshipId = relationship.Id, ProductId = firstProduct.Id, ApplicationName = "기존" }];
+        relationship = await repository.AddAsync(relationship);
+
+        relationship.Supplies = [new RelationshipSupply { RelationshipId = relationship.Id, ProductId = secondProduct.Id, ApplicationName = "변경" }];
+        await repository.UpdateAsync(relationship, relationship.Version);
+        fixture.Context.ChangeTracker.Clear();
+
+        var supplies = await fixture.Context.RelationshipSupplies.AsNoTracking().Where(x => x.RelationshipId == relationship.Id).ToArrayAsync();
+        Assert.Equal(secondProduct.Id, Assert.Single(supplies).ProductId);
+        Assert.Equal("변경", supplies[0].ApplicationName);
+    }
+
     private static Customer Customer(string code, Guid ownerId) => new() { Code = code, CompanyName = "거래처", Country = "KR", DefaultCurrency = Currency.KRW, OwnerUserId = ownerId };
     private static Shipment Shipment(Guid customerId, Guid productId, Guid ownerId, string? number) => new() { ShipmentNumber = number, ShipmentDate = new DateOnly(2026, 10, 1), CustomerId = customerId, ProductId = productId, Quantity = 1m, UnitPrice = 1m, Currency = Currency.KRW, SupplyAmount = 1m, AppliedRate = 1m, KrwAmount = 1m, OwnerUserId = ownerId };
     private static NetworkCompany NetworkCompany(string name, Guid ownerId, Guid? customerId = null) => new() { CompanyName = name, Country = "KR", Industry = "전자", LifecycleType = customerId.HasValue ? LifecycleType.Customer : LifecycleType.Prospect, CustomerId = customerId, CurrentOwnerUserId = ownerId };

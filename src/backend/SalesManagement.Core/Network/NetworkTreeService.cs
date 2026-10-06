@@ -13,7 +13,7 @@ public sealed class NetworkTreeService(INetworkCompanyRepository companies, ICom
     {
         var allCompanies = await companies.ListAsync(ct);
         var byId = allCompanies.ToDictionary(x => x.Id);
-        var today = DateOnly.FromDateTime(DateTime.UtcNow);
+        var today = SeoulBusinessDate.Today();
         var edges = (await relationships.ListAsync(ct)).Where(x => x.Status == EntityStatus.Active && x.ValidFrom <= today && (x.ValidTo is null || x.ValidTo >= today)).ToArray();
         var roots = (query.RootCompanyId.HasValue
             ? allCompanies.Where(x => x.Id == query.RootCompanyId.Value)
@@ -48,8 +48,8 @@ public sealed class NetworkTreeService(INetworkCompanyRepository companies, ICom
 
     private static bool Matches(NetworkCompany company, NetworkTreeQuery query)
     {
-        if (query.OemOnly) return company.IsOem;
-        return (!query.LifecycleType.HasValue || !company.IsOem && company.LifecycleType == query.LifecycleType) &&
+        return (!query.OemOnly || company.IsOem) &&
+            (!query.LifecycleType.HasValue || !company.IsOem && company.LifecycleType == query.LifecycleType) &&
             (!query.OwnerId.HasValue || company.CurrentOwnerUserId == query.OwnerId) &&
             (!query.Status.HasValue || company.Status == query.Status) &&
             (string.IsNullOrWhiteSpace(query.Search) || $"{company.CompanyName} {company.Country} {company.Industry}".Contains(query.Search, StringComparison.OrdinalIgnoreCase));

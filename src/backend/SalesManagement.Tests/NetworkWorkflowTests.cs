@@ -2,11 +2,35 @@ using SalesManagement.Core.Exceptions;
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Network;
 using SalesManagement.InMemory.Repositories;
+using System.Text.Json;
 
 namespace SalesManagement.Tests;
 
 public sealed class NetworkWorkflowTests
 {
+    [Fact]
+    public async Task Manager_Can_Create_Oem_And_Audit_Json_Escapes_Company_Name()
+    {
+        var companies = new InMemoryNetworkCompanyRepository();
+        var customers = new InMemoryCustomerRepository();
+        var assignments = new InMemoryCompanyAssignmentRepository();
+        var users = new InMemoryUserRepository();
+        var audits = new InMemoryAuditRepository();
+        var actor = Manager();
+        await users.AddAsync(actor);
+        var service = new NetworkCompanyService(companies, customers, assignments, users, audits,
+            new InMemoryTransactionRunner(companies, customers, assignments, audits));
+
+        var company = await service.SaveCompanyAsync(
+            new NetworkCompanySaveCommand(null, "삼성 \"전자\"", "KR", "전자", LifecycleType.Customer, true, actor.Id, EntityStatus.Active), actor);
+
+        Assert.True(company.IsOem);
+        Assert.Equal(LifecycleType.Customer, company.LifecycleType);
+        Assert.Null(company.CustomerId);
+        using var json = JsonDocument.Parse(Assert.Single(await audits.ListByTargetAsync(company.Id.ToString())).AfterJson!);
+        Assert.Equal(company.CompanyName, json.RootElement.GetProperty("CompanyName").GetString());
+    }
+
     [Fact]
     public async Task Relationship_Rejects_Three_Node_Cycle_And_Overlap()
     {
@@ -141,6 +165,22 @@ public sealed class NetworkWorkflowTests
         var onlyRoot = Assert.Single(tree);
         Assert.Equal(root.Id, onlyRoot.Company.Id);
         Assert.Equal(match.Id, Assert.Single(onlyRoot.Children).Company.Id);
+    }
+
+    [Fact]
+    public async Task Oem_Filter_Composes_With_Owner_Status_And_Search()
+    {
+        var companies = new InMemoryNetworkCompanyRepository();
+        var owner = Guid.NewGuid();
+        await companies.AddAsync(Company("삼성전자", owner, true));
+        await companies.AddAsync(Company("LG전자", Guid.NewGuid(), true));
+        var inactive = Company("삼성SDI", owner, true); inactive.Status = EntityStatus.Inactive;
+        await companies.AddAsync(inactive);
+
+        var tree = await new NetworkTreeService(companies, new InMemoryCompanyRelationshipRepository())
+            .BuildTreeAsync(new NetworkTreeQuery(OwnerId: owner, Status: EntityStatus.Active, Search: "삼성", OemOnly: true));
+
+        Assert.Equal("삼성전자", Assert.Single(tree).Company.CompanyName);
     }
 
     [Fact]

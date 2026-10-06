@@ -252,7 +252,7 @@ namespace SalesManagement.Postgres.Migrations
 
                 INSERT INTO company_assignments
                     ("Id", "CompanyId", "UserId", "ValidFrom", "ValidTo", "IsCurrent", "CreatedAt", "UpdatedAt", "Version")
-                SELECT n."Id", n."Id", c."OwnerUserId", (c."CreatedAt" AT TIME ZONE 'UTC')::date, NULL, TRUE, c."CreatedAt", c."UpdatedAt", 1
+                SELECT n."Id", n."Id", c."OwnerUserId", (c."CreatedAt" AT TIME ZONE 'Asia/Seoul')::date, NULL, TRUE, c."CreatedAt", c."UpdatedAt", 1
                 FROM customers c
                 JOIN network_companies n ON n."CustomerId" = c."Id"
                 ON CONFLICT ("Id") DO NOTHING;

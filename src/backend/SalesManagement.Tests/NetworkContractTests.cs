@@ -7,6 +7,8 @@ using SalesManagement.Core.Network;
 using SalesManagement.Core.Repositories;
 using SalesManagement.InMemory.Repositories;
 using SalesManagement.Core.Exceptions;
+using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace SalesManagement.Tests;
 
@@ -60,13 +62,21 @@ public sealed class NetworkContractTests
     [InlineData(typeof(ConcurrencyException), 409)]
     [InlineData(typeof(NetworkRelationshipConflictException), 409)]
     [InlineData(typeof(NetworkValidationException), 422)]
+    [InlineData(typeof(DbUpdateException), 409)]
+    [InlineData(typeof(UnauthorizedAccessException), 401)]
     public void Network_Errors_Map_To_Approved_Statuses(Type exceptionType, int expected)
     {
         Exception exception = exceptionType == typeof(ConcurrencyException)
             ? new ConcurrencyException(Guid.NewGuid(), 1, 2)
-            : (Exception)Activator.CreateInstance(exceptionType, "test")!;
+            : exceptionType == typeof(DbUpdateException)
+                ? new DbUpdateException("test", new PostgresException("test", "ERROR", "ERROR", PostgresErrorCodes.UniqueViolation))
+                : (Exception)Activator.CreateInstance(exceptionType, "test")!;
         Assert.Equal(expected, NetworkProblemMapper.Map(exception).Status);
     }
+
+    [Fact]
+    public void NonConstraint_Database_Failures_Are_Not_Misreported_As_Conflicts() =>
+        Assert.False(NetworkProblemMapper.CanMap(new DbUpdateException("database unavailable")));
 
     private static void AssertRoute((string Pattern, IReadOnlyList<string> Methods)[] routes, string pattern, params string[] methods)
     {
