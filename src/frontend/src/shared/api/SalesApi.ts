@@ -1,5 +1,10 @@
 import type {
   AuditLog,
+  AssignmentChangeInput,
+  CompanyAssignment,
+  CompanyContact,
+  CompanyRelationship,
+  ContactInput,
   Customer,
   DailyRate,
   DashboardQuery,
@@ -9,8 +14,14 @@ import type {
   LoginRequest,
   ListQuery,
   MonthlyRate,
+  NetworkCompany,
+  NetworkCompanyInput,
+  NetworkQuery,
+  NetworkTreeNode,
   Price,
   Product,
+  ProspectConversionInput,
+  RelationshipInput,
   SalesTarget,
   Shipment,
   User,
@@ -36,6 +47,26 @@ export interface SalesApi {
   getCustomer(id: string): Promise<Customer>
   createCustomer(input: Create<Customer>): Promise<Customer>
   updateCustomer(id: string, input: Update<Customer>): Promise<Customer>
+
+  listNetworkCompanies(query?: NetworkQuery): Promise<NetworkCompany[]>
+  getNetworkCompany(id: string): Promise<NetworkCompany>
+  createNetworkCompany(input: NetworkCompanyInput): Promise<NetworkCompany>
+  updateNetworkCompany(id: string, input: NetworkCompanyInput & { expectedVersion: number }): Promise<NetworkCompany>
+  disableNetworkCompany(id: string, expectedVersion: number): Promise<void>
+  convertNetworkCompany(id: string, input: ProspectConversionInput): Promise<NetworkCompany>
+  getNetworkTree(query: NetworkQuery): Promise<NetworkTreeNode[]>
+
+  listCompanyRelationships(companyId?: string): Promise<CompanyRelationship[]>
+  createNetworkRelationship(input: RelationshipInput): Promise<CompanyRelationship>
+  updateNetworkRelationship(id: string, input: RelationshipInput & { expectedVersion: number }): Promise<CompanyRelationship>
+  disableNetworkRelationship(id: string, expectedVersion: number): Promise<void>
+
+  listCompanyContacts(companyId: string): Promise<CompanyContact[]>
+  createCompanyContact(companyId: string, input: ContactInput): Promise<CompanyContact>
+  updateCompanyContact(companyId: string, contactId: string, input: ContactInput & { expectedVersion: number }): Promise<CompanyContact>
+
+  listCompanyAssignments(companyId: string): Promise<CompanyAssignment[]>
+  changeCompanyAssignment(companyId: string, input: AssignmentChangeInput): Promise<CompanyAssignment>
 
   listProducts(query?: ListQuery): Promise<Product[]>
   getProduct(id: string): Promise<Product>

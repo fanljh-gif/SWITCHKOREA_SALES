@@ -1,5 +1,5 @@
 import type { SalesApi } from './SalesApi'
-import type { AuditLog, Customer, DailyRate, DashboardQuery, DashboardSummary, ImportRequest, ImportValidation, ListQuery, LoginRequest, MonthlyRate, Price, Product, SalesTarget, Shipment, User } from './contracts'
+import type { AssignmentChangeInput, AuditLog, CompanyAssignment, CompanyContact, CompanyRelationship, ContactInput, Customer, DailyRate, DashboardQuery, DashboardSummary, ImportRequest, ImportValidation, ListQuery, LoginRequest, MonthlyRate, NetworkCompany, NetworkCompanyInput, NetworkQuery, NetworkTreeNode, Price, Product, ProspectConversionInput, RelationshipInput, SalesTarget, Shipment, User } from './contracts'
 
 type Create<T> = Omit<T, 'id' | 'version'>
 type Update<T> = Partial<Create<T>> & { version: number }
@@ -33,6 +33,11 @@ export class HttpSalesApi implements SalesApi {
   private mapCustomer(raw: any): Customer { return { ...raw, ownerId: raw.ownerId ?? raw.ownerUserId, defaultCurrency: String(raw.defaultCurrency).toUpperCase(), status: String(raw.status).toLowerCase() === 'inactive' || raw.status === 1 ? 'inactive' : 'active' } }
   private mapProduct(raw: any): Product { return { ...raw, itemType: String(raw.itemType).toLowerCase(), status: String(raw.status).toLowerCase() === 'inactive' || raw.status === 1 ? 'inactive' : 'active' } }
   private mapShipment(raw: any): Shipment { return { ...raw, ownerId: raw.ownerId ?? raw.ownerUserId, currency: String(raw.currency).toUpperCase(), status: String(raw.status).toLowerCase() === 'cancelled' || raw.status === 1 ? 'cancelled' : 'confirmed' } }
+  private mapNetworkCompany(raw: any): NetworkCompany { return { id: raw.id, companyName: raw.companyName, country: raw.country, industry: raw.industry, lifecycleType: String(raw.lifecycleType).toLowerCase() === 'prospect' || raw.lifecycleType === 1 ? 'prospect' : 'customer', isOem: Boolean(raw.isOem), customerId: raw.customerId ?? null, currentOwnerId: raw.currentOwnerId ?? raw.currentOwnerUserId ?? '', status: String(raw.status).toLowerCase() === 'inactive' || raw.status === 1 ? 'inactive' : 'active', version: raw.version } }
+  private mapRelationship(raw: any): CompanyRelationship { return { id: raw.id, upstreamCompanyId: raw.upstreamCompanyId, downstreamCompanyId: raw.downstreamCompanyId, validFrom: raw.validFrom, validTo: raw.validTo, notes: raw.notes, status: String(raw.status).toLowerCase() === 'inactive' || raw.status === 1 ? 'inactive' : 'active', version: raw.version, supplies: (raw.supplies ?? []).map((item: any) => ({ id: item.id, relationshipId: item.relationshipId ?? raw.id, productId: item.productId, applicationName: item.applicationName, notes: item.notes })) } }
+  private mapContact(raw: any): CompanyContact { return { id: raw.id, companyId: raw.companyId, name: raw.name, department: raw.department, position: raw.position, businessRole: raw.businessRole, mobilePhone: raw.mobilePhone, email: raw.email, validFrom: raw.validFrom, validTo: raw.validTo, employmentStatus: String(raw.employmentStatus).toLowerCase() === 'former' || raw.employmentStatus === 1 ? 'former' : 'active', version: raw.version } }
+  private mapAssignment(raw: any): CompanyAssignment { return { id: raw.id, companyId: raw.companyId, userId: raw.userId ?? raw.ownerUserId, validFrom: raw.validFrom, validTo: raw.validTo, isCurrent: Boolean(raw.isCurrent), version: raw.version } }
+  private mapTreeNode(raw: any): NetworkTreeNode { return { company: this.mapNetworkCompany(raw.company), depth: raw.depth, pathCompanyIds: raw.pathCompanyIds, children: (raw.children ?? []).map((child: any) => this.mapTreeNode(child)) } }
 
   async getCurrentUser() { try { return this.mapUser(await this.request<any>('/api/auth/me')) } catch (error) { if (error instanceof SalesApiError && error.status === 401) return null; throw error } }
   async login(input: LoginRequest) { const result = await this.request<any>('/api/auth/login', { method: 'POST', body: JSON.stringify(input) }); return { user: this.mapUser(result.user), passwordChangeRequired: result.passwordChangeRequired } }
@@ -51,6 +56,26 @@ export class HttpSalesApi implements SalesApi {
   createCustomer(input: Create<Customer>) { return this.saveCustomer(undefined, input, 0) }
   updateCustomer(id: string, input: Update<Customer>) { return this.saveCustomer(id, input as Create<Customer>, input.version) }
   private async saveCustomer(id: string | undefined, input: Create<Customer>, version: number) { return this.mapCustomer(await this.request<any>('/api/customers', { method: 'POST', body: JSON.stringify({ command: { id, code: input.code, companyName: input.companyName, country: input.country, defaultCurrency: input.defaultCurrency, ownerUserId: input.ownerId, status: input.status }, expectedVersion: version }) })) }
+
+  async listNetworkCompanies(query?: NetworkQuery) { const rows = await this.request<any[]>(`/api/network/companies${this.query({ rootCompanyId: query?.rootCompanyId, lifecycleType: query?.lifecycleType, ownerId: query?.ownerId, status: query?.status, search: query?.search })}`); return rows.map((row) => this.mapNetworkCompany(row)) }
+  async getNetworkCompany(id: string) { return this.mapNetworkCompany(await this.request<any>(`/api/network/companies/${id}`)) }
+  async createNetworkCompany(input: NetworkCompanyInput) { return this.mapNetworkCompany(await this.request<any>('/api/network/companies', { method: 'POST', body: JSON.stringify(input) })) }
+  async updateNetworkCompany(id: string, input: NetworkCompanyInput & { expectedVersion: number }) { return this.mapNetworkCompany(await this.request<any>(`/api/network/companies/${id}`, { method: 'PUT', body: JSON.stringify(input) })) }
+  disableNetworkCompany(id: string, expectedVersion: number) { return this.request<void>(`/api/network/companies/${id}/disable`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) }
+  async convertNetworkCompany(id: string, input: ProspectConversionInput) { return this.mapNetworkCompany(await this.request<any>(`/api/network/companies/${id}/convert`, { method: 'POST', body: JSON.stringify(input) })) }
+  async getNetworkTree(query: NetworkQuery) { const rows = await this.request<any[]>(`/api/network/tree${this.query({ rootCompanyId: query.rootCompanyId, lifecycleType: query.lifecycleType, ownerId: query.ownerId, status: query.status, search: query.search })}`); return rows.map((row) => this.mapTreeNode(row)) }
+
+  async listCompanyRelationships(companyId?: string) { const rows = await this.request<any[]>(`/api/network/relationships${this.query({ companyId })}`); return rows.map((row) => this.mapRelationship(row)) }
+  async createNetworkRelationship(input: RelationshipInput) { return this.mapRelationship(await this.request<any>('/api/network/relationships', { method: 'POST', body: JSON.stringify(input) })) }
+  async updateNetworkRelationship(id: string, input: RelationshipInput & { expectedVersion: number }) { return this.mapRelationship(await this.request<any>(`/api/network/relationships/${id}`, { method: 'PUT', body: JSON.stringify(input) })) }
+  disableNetworkRelationship(id: string, expectedVersion: number) { return this.request<void>(`/api/network/relationships/${id}/disable`, { method: 'POST', body: JSON.stringify({ expectedVersion }) }) }
+
+  async listCompanyContacts(companyId: string) { const rows = await this.request<any[]>(`/api/network/companies/${companyId}/contacts`); return rows.map((row) => this.mapContact(row)) }
+  async createCompanyContact(companyId: string, input: ContactInput) { return this.mapContact(await this.request<any>(`/api/network/companies/${companyId}/contacts`, { method: 'POST', body: JSON.stringify(input) })) }
+  async updateCompanyContact(companyId: string, contactId: string, input: ContactInput & { expectedVersion: number }) { return this.mapContact(await this.request<any>(`/api/network/companies/${companyId}/contacts/${contactId}`, { method: 'PUT', body: JSON.stringify(input) })) }
+
+  async listCompanyAssignments(companyId: string) { const rows = await this.request<any[]>(`/api/network/companies/${companyId}/assignments`); return rows.map((row) => this.mapAssignment(row)) }
+  async changeCompanyAssignment(companyId: string, input: AssignmentChangeInput) { return this.mapAssignment(await this.request<any>(`/api/network/companies/${companyId}/assignments`, { method: 'POST', body: JSON.stringify(input) })) }
 
   async listProducts(query?: ListQuery) { const rows = (await this.request<any[]>('/api/products')).map(x => this.mapProduct(x)); return rows.filter(x => (!query?.search || `${x.code} ${x.name}`.toLowerCase().includes(query.search.toLowerCase())) && (!query?.status || x.status === query.status)) }
   async getProduct(id: string) { const value = (await this.listProducts()).find(x => x.id === id); if (!value) throw new SalesApiError(404, '품목을 찾을 수 없습니다.'); return value }
