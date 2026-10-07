@@ -17,6 +17,14 @@ public static class PostgresServiceExtensions
         services.AddScoped<ICompanyRelationshipRepository, CompanyRelationshipRepository>();
         services.AddScoped<ICompanyContactRepository, CompanyContactRepository>();
         services.AddScoped<ICompanyAssignmentRepository, CompanyAssignmentRepository>();
+        services.AddScoped<IProspectCandidateRepository, ProspectCandidateRepository>();
+        services.AddScoped<IResearchEvidenceRepository, ResearchEvidenceRepository>();
+        services.AddScoped<IProspectAssessmentRepository, ProspectAssessmentRepository>();
+        services.AddScoped<IDuplicateMatchRepository, DuplicateMatchRepository>();
+        services.AddScoped<IProspectActivityRepository, ProspectActivityRepository>();
+        services.AddScoped<IProspectConversionRepository, ProspectConversionRepository>();
+        services.AddScoped<IResearchTargetProfileRepository, ResearchTargetProfileRepository>();
+        services.AddScoped<IResearchRunRepository, ResearchRunRepository>();
         return services;
     }
 }

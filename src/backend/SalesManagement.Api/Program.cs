@@ -54,7 +54,7 @@ builder.Services.AddScoped<CompanyAssignmentService>();
 builder.Services.AddScoped<DuplicateDetectionService>();
 builder.Services.AddScoped<ProspectReviewService>();
 builder.Services.AddScoped<ResearchRunService>();
-builder.Services.AddSingleton<ProspectExcelService>();
+builder.Services.AddScoped<ProspectExcelService>();
 builder.Services.Configure<ResearchProviderOptions>(builder.Configuration.GetSection(ResearchProviderOptions.SectionName));
 builder.Services.AddHttpClient<OpenAiProspectResearchProvider>(client => client.Timeout = TimeSpan.FromSeconds(45));
 builder.Services.AddScoped<IProspectResearchProvider>(provider =>

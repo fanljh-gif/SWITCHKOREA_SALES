@@ -22,6 +22,14 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : D
     public DbSet<RelationshipSupply> RelationshipSupplies => Set<RelationshipSupply>();
     public DbSet<CompanyContact> CompanyContacts => Set<CompanyContact>();
     public DbSet<CompanyAssignment> CompanyAssignments => Set<CompanyAssignment>();
+    public DbSet<ResearchTargetProfile> ResearchTargetProfiles => Set<ResearchTargetProfile>();
+    public DbSet<ResearchRun> ResearchRuns => Set<ResearchRun>();
+    public DbSet<ProspectCandidate> ProspectCandidates => Set<ProspectCandidate>();
+    public DbSet<ResearchEvidence> ResearchEvidence => Set<ResearchEvidence>();
+    public DbSet<ProspectAssessment> ProspectAssessments => Set<ProspectAssessment>();
+    public DbSet<ProspectDuplicateMatch> ProspectDuplicateMatches => Set<ProspectDuplicateMatch>();
+    public DbSet<ProspectActivity> ProspectActivities => Set<ProspectActivity>();
+    public DbSet<ProspectConversion> ProspectConversions => Set<ProspectConversion>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyConfigurationsFromAssembly(typeof(SalesDbContext).Assembly);
 

@@ -1,10 +1,10 @@
-using System.Collections.Concurrent;
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Repositories;
 
 namespace SalesManagement.Core.Research;
 
 public sealed class ResearchRunService(
+    IResearchTargetProfileRepository profiles,
     IResearchRunRepository runs,
     IProspectCandidateRepository candidates,
     IResearchEvidenceRepository evidence,
@@ -12,19 +12,17 @@ public sealed class ResearchRunService(
     IProspectResearchProvider provider,
     DuplicateDetectionService duplicateDetection)
 {
-    private readonly ConcurrentDictionary<Guid, ResearchTargetProfile> _profilesByRun = new();
-
     public async Task<ResearchRun> StartAsync(ResearchRunKind kind, ResearchTargetProfile profile, string? inputHash = null, CancellationToken cancellationToken = default)
     {
+        if (await profiles.GetAsync(profile.Id, cancellationToken) is null) await profiles.AddAsync(profile, cancellationToken);
         var run = await runs.AddAsync(new ResearchRun { ResearchTargetProfileId = profile.Id, Kind = kind, Status = ResearchRunStatus.Queued, InputHash = inputHash }, cancellationToken);
-        _profilesByRun[run.Id] = profile;
         return run;
     }
 
     public async Task<ResearchRun> ProcessAsync(Guid runId, CancellationToken cancellationToken = default)
     {
         var run = await runs.GetAsync(runId, cancellationToken) ?? throw new KeyNotFoundException("리서치 실행을 찾을 수 없습니다.");
-        if (!_profilesByRun.TryGetValue(runId, out var profile)) throw new InvalidOperationException("리서치 실행 프로필을 찾을 수 없습니다.");
+        var profile = await profiles.GetAsync(run.ResearchTargetProfileId, cancellationToken) ?? throw new InvalidOperationException("리서치 실행 프로필을 찾을 수 없습니다.");
         var version = run.Version;
         run.Status = ResearchRunStatus.Running; run.StartedAt ??= DateTimeOffset.UtcNow; run.FailedCount = 0; run.ErrorSummary = null;
         run = await runs.UpdateAsync(run, version, cancellationToken);

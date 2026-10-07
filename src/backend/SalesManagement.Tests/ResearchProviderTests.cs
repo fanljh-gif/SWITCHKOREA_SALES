@@ -56,7 +56,7 @@ public sealed class ResearchProviderTests
         var runs = new InMemoryResearchRunRepository(); var candidates = new InMemoryProspectCandidateRepository(); var evidence = new InMemoryResearchEvidenceRepository(); var duplicates = new InMemoryDuplicateMatchRepository();
         var provider = new SequenceProvider(failAfterFirst: true);
         var duplicateService = new DuplicateDetectionService(candidates, new InMemoryNetworkCompanyRepository(), new InMemoryCustomerRepository());
-        var service = new ResearchRunService(runs, candidates, evidence, duplicates, provider, duplicateService);
+        var service = new ResearchRunService(new InMemoryResearchTargetProfileRepository(), runs, candidates, evidence, duplicates, provider, duplicateService);
         var profile = new ResearchTargetProfile { Name = "Global", Regions = ["한국"], Industries = ["전자"] };
         var run = await service.StartAsync(ResearchRunKind.Manual, profile);
 
@@ -75,7 +75,7 @@ public sealed class ResearchProviderTests
     {
         var runs = new InMemoryResearchRunRepository(); var candidates = new InMemoryProspectCandidateRepository(); var evidence = new InMemoryResearchEvidenceRepository(); var duplicates = new InMemoryDuplicateMatchRepository();
         var provider = new SequenceProvider();
-        var service = new ResearchRunService(runs, candidates, evidence, duplicates, provider, new DuplicateDetectionService(candidates, new InMemoryNetworkCompanyRepository(), new InMemoryCustomerRepository()));
+        var service = new ResearchRunService(new InMemoryResearchTargetProfileRepository(), runs, candidates, evidence, duplicates, provider, new DuplicateDetectionService(candidates, new InMemoryNetworkCompanyRepository(), new InMemoryCustomerRepository()));
         var profile = new ResearchTargetProfile { Name = "Global" };
 
         await service.ProcessAsync((await service.StartAsync(ResearchRunKind.Scheduled, profile)).Id, CancellationToken.None);

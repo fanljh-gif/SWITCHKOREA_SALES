@@ -581,6 +581,334 @@ namespace SalesManagement.Postgres.Migrations
                         });
                 });
 
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectActivity", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Action")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ActorUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AfterJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("BeforeJson")
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<DateTimeOffset>("OccurredAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("ProspectCandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ActorUserId");
+
+                    b.HasIndex("ProspectCandidateId", "OccurredAt");
+
+                    b.ToTable("prospect_activities", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectAssessment", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("AiModel")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("AiRecommendation")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("AiRisks")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("AiSummary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTimeOffset>("AssessedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("CompanyPotential")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("EvidenceQuality")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("IndustryFit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Priority")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<int>("ProductFit")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("ProspectCandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("RegionFit")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("RuleVersion")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int>("SupplyChainFit")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Total")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProspectCandidateId", "AssessedAt");
+
+                    b.ToTable("prospect_assessments", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectCandidate", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Applications")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("CompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("CompanySize")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Country")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Domain")
+                        .IsRequired()
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)");
+
+                    b.Property<string>("EnglishName")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Industry")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<Guid?>("NetworkCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("NormalizedCompanyName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("NormalizedDomain")
+                        .IsRequired()
+                        .HasMaxLength(253)
+                        .HasColumnType("character varying(253)");
+
+                    b.Property<Guid?>("OwnerUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Products")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("ProviderResultId")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("Region")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<Guid>("ResearchRunId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.Property<string>("Website")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("NetworkCompanyId");
+
+                    b.HasIndex("NormalizedDomain");
+
+                    b.HasIndex("OwnerUserId");
+
+                    b.HasIndex("ProviderResultId")
+                        .IsUnique();
+
+                    b.HasIndex("ResearchRunId");
+
+                    b.HasIndex("Country", "NormalizedCompanyName");
+
+                    b.ToTable("prospect_candidates", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectConversion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ApprovedByUserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("ConvertedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<Guid>("NetworkCompanyId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("ProspectCandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ApprovedByUserId");
+
+                    b.HasIndex("NetworkCompanyId")
+                        .IsUnique();
+
+                    b.HasIndex("ProspectCandidateId")
+                        .IsUnique();
+
+                    b.ToTable("prospect_conversions", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectDuplicateMatch", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("Decision")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ProspectCandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Reasons")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<decimal>("Similarity")
+                        .HasPrecision(5, 4)
+                        .HasColumnType("numeric(5,4)");
+
+                    b.Property<string>("Strength")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("TargetName")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("TargetType")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProspectCandidateId", "TargetType", "TargetId")
+                        .IsUnique();
+
+                    b.ToTable("prospect_duplicate_matches", (string)null);
+                });
+
             modelBuilder.Entity("SalesManagement.Core.Models.RelationshipSupply", b =>
                 {
                     b.Property<Guid>("Id")
@@ -620,6 +948,190 @@ namespace SalesManagement.Postgres.Migrations
                         .IsUnique();
 
                     b.ToTable("relationship_supplies", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ResearchEvidence", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Confidence")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<DateOnly>("ObservedDate")
+                        .HasColumnType("date");
+
+                    b.Property<Guid>("ProspectCandidateId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SourceHash")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<string>("SourceUrl")
+                        .IsRequired()
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Summary")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ProspectCandidateId");
+
+                    b.HasIndex("SourceHash")
+                        .IsUnique();
+
+                    b.ToTable("research_evidence", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_research_evidence_source_observed", "length(\"SourceUrl\") > 0 AND \"ObservedDate\" > '0001-01-01'");
+                        });
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ResearchRun", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("ApiCallCount")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTimeOffset?>("CompletedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<decimal>("CostKrw")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<int>("DiscoveredCount")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("EnrichedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ErrorSummary")
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<int>("FailedCount")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InputHash")
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<Guid>("ResearchTargetProfileId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset?>("StartedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasColumnType("text");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("InputHash")
+                        .IsUnique()
+                        .HasFilter("\"InputHash\" IS NOT NULL");
+
+                    b.HasIndex("ResearchTargetProfileId");
+
+                    b.ToTable("research_runs", (string)null);
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ResearchTargetProfile", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTimeOffset>("CreatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<string>("ExcludeKeywords")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("IncludeKeywords")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Industries")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("MaxAiAnalyses")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxSearchResults")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTimeOffset?>("NextRunAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Regions")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<DateTimeOffset>("UpdatedAt")
+                        .HasColumnType("timestamptz");
+
+                    b.Property<long>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("bigint");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Name")
+                        .IsUnique();
+
+                    b.ToTable("research_target_profiles", (string)null);
                 });
 
             modelBuilder.Entity("SalesManagement.Core.Models.SalesTarget", b =>
@@ -899,6 +1411,79 @@ namespace SalesManagement.Postgres.Migrations
                         .IsRequired();
                 });
 
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectActivity", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("ActorUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.ProspectCandidate", null)
+                        .WithMany()
+                        .HasForeignKey("ProspectCandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectAssessment", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.ProspectCandidate", null)
+                        .WithMany()
+                        .HasForeignKey("ProspectCandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectCandidate", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.NetworkCompany", null)
+                        .WithMany()
+                        .HasForeignKey("NetworkCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SalesManagement.Core.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("OwnerUserId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("SalesManagement.Core.Models.ResearchRun", null)
+                        .WithMany()
+                        .HasForeignKey("ResearchRunId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectConversion", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("ApprovedByUserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.NetworkCompany", null)
+                        .WithMany()
+                        .HasForeignKey("NetworkCompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("SalesManagement.Core.Models.ProspectCandidate", null)
+                        .WithMany()
+                        .HasForeignKey("ProspectCandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ProspectDuplicateMatch", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.ProspectCandidate", null)
+                        .WithMany()
+                        .HasForeignKey("ProspectCandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
             modelBuilder.Entity("SalesManagement.Core.Models.RelationshipSupply", b =>
                 {
                     b.HasOne("SalesManagement.Core.Models.Product", null)
@@ -911,6 +1496,24 @@ namespace SalesManagement.Postgres.Migrations
                         .WithMany("Supplies")
                         .HasForeignKey("RelationshipId")
                         .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ResearchEvidence", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.ProspectCandidate", null)
+                        .WithMany()
+                        .HasForeignKey("ProspectCandidateId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+                });
+
+            modelBuilder.Entity("SalesManagement.Core.Models.ResearchRun", b =>
+                {
+                    b.HasOne("SalesManagement.Core.Models.ResearchTargetProfile", null)
+                        .WithMany()
+                        .HasForeignKey("ResearchTargetProfileId")
+                        .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
                 });
 

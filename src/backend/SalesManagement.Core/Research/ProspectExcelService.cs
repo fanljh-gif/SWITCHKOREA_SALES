@@ -13,7 +13,9 @@ public sealed record ProspectExcelValidation(Guid ValidationId, string FileHash,
 public sealed class ProspectExcelService(
     IProspectCandidateRepository candidates,
     IResearchEvidenceRepository evidence,
-    DuplicateDetectionService duplicateDetection)
+    DuplicateDetectionService duplicateDetection,
+    IResearchTargetProfileRepository profiles,
+    IResearchRunRepository runs)
 {
     private readonly ConcurrentDictionary<Guid, ProspectExcelValidation> _validations = new();
     private readonly ConcurrentDictionary<string, Guid> _validationByHash = new(StringComparer.OrdinalIgnoreCase);
@@ -43,6 +45,10 @@ public sealed class ProspectExcelService(
     {
         AuthorizationService.EnsureActive(actor);
         if (!_validations.TryGetValue(validationId, out var validation)) throw new KeyNotFoundException("Excel 검증 결과를 찾을 수 없습니다.");
+        var profile = (await profiles.ListAsync(cancellationToken)).FirstOrDefault(x => x.Name == "Excel 가져오기")
+            ?? await profiles.AddAsync(new ResearchTargetProfile { Name = "Excel 가져오기", IsActive = false }, cancellationToken);
+        var run = (await runs.ListAsync(cancellationToken)).FirstOrDefault(x => x.InputHash == validation.FileHash)
+            ?? await runs.AddAsync(new ResearchRun { ResearchTargetProfileId = profile.Id, Kind = ResearchRunKind.Excel, Status = ResearchRunStatus.Completed, InputHash = validation.FileHash, DiscoveredCount = validation.Rows.Count, EnrichedCount = validation.Rows.Count, StartedAt = DateTimeOffset.UtcNow, CompletedAt = DateTimeOffset.UtcNow }, cancellationToken);
         var imported = new List<ProspectCandidate>();
         foreach (var row in validation.Rows)
         {
@@ -50,7 +56,7 @@ public sealed class ProspectExcelService(
             if (await candidates.FindByProviderResultAsync(providerId, cancellationToken) is { } existing) { imported.Add(existing); continue; }
             var matches = await duplicateDetection.FindMatchesAsync(new(row.CompanyName, row.Country, row.Website, row.Industry ?? string.Empty), cancellationToken);
             var domain = DuplicateDetectionService.NormalizeRootDomain(row.Website);
-            var candidate = await candidates.AddAsync(new ProspectCandidate { ResearchRunId = Guid.Empty, ProviderResultId = providerId, CompanyName = row.CompanyName, NormalizedCompanyName = DuplicateDetectionService.NormalizeCompanyName(row.CompanyName), Country = row.Country, Region = row.Country, Industry = row.Industry ?? string.Empty, Domain = domain, NormalizedDomain = domain, Website = row.Website, Products = string.IsNullOrWhiteSpace(row.Products) ? [] : row.Products.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList(), OwnerUserId = actor.Role == Role.Member ? actor.Id : null, Status = matches.Count > 0 ? ProspectStatus.DuplicateSuspected : ProspectStatus.Collected }, cancellationToken);
+            var candidate = await candidates.AddAsync(new ProspectCandidate { ResearchRunId = run.Id, ProviderResultId = providerId, CompanyName = row.CompanyName, NormalizedCompanyName = DuplicateDetectionService.NormalizeCompanyName(row.CompanyName), Country = row.Country, Region = row.Country, Industry = row.Industry ?? string.Empty, Domain = domain, NormalizedDomain = domain, Website = row.Website, Products = string.IsNullOrWhiteSpace(row.Products) ? [] : row.Products.Split(',', StringSplitOptions.TrimEntries | StringSplitOptions.RemoveEmptyEntries).ToList(), OwnerUserId = actor.Role == Role.Member ? actor.Id : null, Status = matches.Count > 0 ? ProspectStatus.DuplicateSuspected : ProspectStatus.Collected }, cancellationToken);
             await evidence.AddAsync(new ResearchEvidence { ProspectCandidateId = candidate.Id, SourceUrl = row.Website, Title = $"Excel row {row.RowNumber}", ObservedDate = DateOnly.FromDateTime(DateTime.UtcNow), Summary = row.Notes ?? "Excel 후보 등록", Confidence = EvidenceConfidence.Low, SourceHash = providerId }, cancellationToken);
             imported.Add(candidate);
         }
