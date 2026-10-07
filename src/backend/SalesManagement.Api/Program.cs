@@ -17,6 +17,8 @@ using SalesManagement.Core.Prices;
 using SalesManagement.Core.Products;
 using SalesManagement.Core.Rates;
 using SalesManagement.Core.Research;
+using SalesManagement.Api.Research;
+using SalesManagement.Api.Workers;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Shipments;
 using SalesManagement.Core.Targets;
@@ -53,7 +55,14 @@ builder.Services.AddScoped<DuplicateDetectionService>();
 builder.Services.AddScoped<ProspectReviewService>();
 builder.Services.AddScoped<ResearchRunService>();
 builder.Services.AddSingleton<ProspectExcelService>();
-builder.Services.AddSingleton<IProspectResearchProvider, DisabledProspectResearchProvider>();
+builder.Services.Configure<ResearchProviderOptions>(builder.Configuration.GetSection(ResearchProviderOptions.SectionName));
+builder.Services.AddHttpClient<OpenAiProspectResearchProvider>(client => client.Timeout = TimeSpan.FromSeconds(45));
+builder.Services.AddScoped<IProspectResearchProvider>(provider =>
+    provider.GetRequiredService<Microsoft.Extensions.Options.IOptions<ResearchProviderOptions>>().Value.Provider.Equals("OpenAI", StringComparison.OrdinalIgnoreCase)
+        ? provider.GetRequiredService<OpenAiProspectResearchProvider>()
+        : new DisabledProspectResearchProvider());
+builder.Services.AddHostedService<ResearchWorker>();
+builder.Services.AddHostedService<WeeklyResearchWorker>();
 builder.Services.AddSalesCookieAuthentication();
 builder.Services.AddAuthorization();
 
