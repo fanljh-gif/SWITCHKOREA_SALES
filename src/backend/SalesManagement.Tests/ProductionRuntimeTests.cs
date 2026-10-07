@@ -48,11 +48,17 @@ public sealed class ProductionRuntimeTests
         var keyPath = Path.Combine(Path.GetTempPath(), $"switch-korea-keys-{Guid.NewGuid():N}");
         var services = new ServiceCollection();
         services.AddLogging();
-        services.AddSalesProductionRuntime(Configuration(new Dictionary<string, string?>
+        var values = new Dictionary<string, string?>
         {
             ["ConnectionStrings:SalesManagement"] = "Host=127.0.0.1;Port=1;Database=missing;Username=missing;Timeout=1",
             ["SWITCHKOREA_DATA_PROTECTION_PATH"] = keyPath,
-        }), Environment(Environments.Production));
+        };
+        if (!OperatingSystem.IsWindows())
+        {
+            values["SWITCHKOREA_HOSTING_MODE"] = "Render";
+            values["RENDER_EXTERNAL_HOSTNAME"] = "switch-korea-sales-test.onrender.com";
+        }
+        services.AddSalesProductionRuntime(Configuration(values), Environment(Environments.Production));
 
         using var provider = services.BuildServiceProvider();
         var result = await provider.GetRequiredService<HealthCheckService>()
@@ -64,6 +70,8 @@ public sealed class ProductionRuntimeTests
     [Fact]
     public void Production_persists_and_encrypts_data_protection_keys()
     {
+        if (!OperatingSystem.IsWindows())
+            return;
         var keyPath = Path.Combine(Path.GetTempPath(), $"switch-korea-keys-{Guid.NewGuid():N}");
         var services = new ServiceCollection();
         services.AddLogging();
