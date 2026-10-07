@@ -1,5 +1,6 @@
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Research;
+using SalesManagement.InMemory.Repositories;
 
 namespace SalesManagement.Tests;
 
@@ -49,4 +50,40 @@ public sealed class ProspectResearchTests
         Assert.True(typeof(EntityBase).IsAssignableFrom(typeof(ProspectAssessment)));
         Assert.True(typeof(EntityBase).IsAssignableFrom(typeof(ProspectActivity)));
     }
+
+    [Fact]
+    public async Task Duplicate_Detection_Uses_Root_Domain_And_Does_Not_Auto_Merge()
+    {
+        var candidates = new InMemoryProspectCandidateRepository();
+        var existing = await candidates.AddAsync(Candidate("Existing GmbH", "DE", "example.com"));
+        var service = new DuplicateDetectionService(candidates, new InMemoryNetworkCompanyRepository(), new InMemoryCustomerRepository());
+
+        var matches = await service.FindMatchesAsync(new ProspectCandidateDraft("Other Legal Name", "DE", "https://www.example.com/products", "Industrial"));
+
+        var match = Assert.Single(matches);
+        Assert.Equal(existing.Id, match.TargetId);
+        Assert.Equal(DuplicateMatchStrength.Strong, match.Strength);
+        Assert.Equal(ProspectStatus.Collected, (await candidates.GetAsync(existing.Id))!.Status);
+    }
+
+    [Fact]
+    public async Task Similar_Headquarters_And_Subsidiary_Name_Is_Review_Only()
+    {
+        var networks = new InMemoryNetworkCompanyRepository();
+        var company = await networks.AddAsync(new NetworkCompany { CompanyName = "Nordlicht Controls Europe GmbH", Country = "DE", Industry = "가전", CurrentOwnerUserId = Guid.NewGuid() });
+        var service = new DuplicateDetectionService(new InMemoryProspectCandidateRepository(), networks, new InMemoryCustomerRepository());
+
+        var matches = await service.FindMatchesAsync(new ProspectCandidateDraft("Nordlicht Controls Europe AG", "DE", "https://nordlicht.example", "가전"));
+
+        var match = Assert.Single(matches);
+        Assert.Equal(company.Id, match.TargetId);
+        Assert.Equal(DuplicateMatchStrength.Suspected, match.Strength);
+    }
+
+    private static ProspectCandidate Candidate(string name, string country, string domain, Guid? ownerId = null) => new()
+    {
+        ResearchRunId = Guid.NewGuid(), ProviderResultId = Guid.NewGuid().ToString(), CompanyName = name,
+        NormalizedCompanyName = name.ToLowerInvariant(), Country = country, Region = country, Industry = "전자",
+        Domain = domain, NormalizedDomain = domain, Website = $"https://{domain}", OwnerUserId = ownerId,
+    };
 }

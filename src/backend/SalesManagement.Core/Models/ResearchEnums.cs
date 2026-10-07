@@ -8,3 +8,5 @@ public enum EvidenceConfidence { High, Medium, Low }
 public enum DuplicateTargetType { Candidate, NetworkCompany, Customer }
 public enum DuplicateDecision { Pending, Duplicate, Distinct }
 public enum ProspectActivityAction { Collected, Enriched, Assigned, Reviewed, DuplicateDecided, Approved, Converted, Excluded }
+public enum DuplicateMatchStrength { Strong, Suspected }
+public enum ProspectReviewDecision { OnHold, Exclude, Approve, Distinct, Duplicate }
