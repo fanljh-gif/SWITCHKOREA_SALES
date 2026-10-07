@@ -1,6 +1,7 @@
 using SalesManagement.Core.Models;
 using SalesManagement.Core.Research;
 using SalesManagement.InMemory.Repositories;
+using ClosedXML.Excel;
 
 namespace SalesManagement.Tests;
 
@@ -86,4 +87,24 @@ public sealed class ProspectResearchTests
         NormalizedCompanyName = name.ToLowerInvariant(), Country = country, Region = country, Industry = "전자",
         Domain = domain, NormalizedDomain = domain, Website = $"https://{domain}", OwnerUserId = ownerId,
     };
+
+    [Fact]
+    public async Task Excel_Validation_And_Import_Are_Idempotent_By_File_Hash_And_Row()
+    {
+        var candidates = new InMemoryProspectCandidateRepository(); var evidence = new InMemoryResearchEvidenceRepository();
+        var service = new ProspectExcelService(candidates, evidence, new DuplicateDetectionService(candidates, new InMemoryNetworkCompanyRepository(), new InMemoryCustomerRepository()));
+        using var workbook = new XLWorkbook(); var sheet = workbook.AddWorksheet("Candidates");
+        sheet.Cell(1, 1).Value = "CompanyName"; sheet.Cell(1, 2).Value = "Country"; sheet.Cell(1, 3).Value = "Website"; sheet.Cell(1, 4).Value = "Industry";
+        sheet.Cell(2, 1).Value = "Pragati Meditech"; sheet.Cell(2, 2).Value = "IN"; sheet.Cell(2, 3).Value = "https://pragati.example"; sheet.Cell(2, 4).Value = "의료기기";
+        using var stream = new MemoryStream(); workbook.SaveAs(stream); var bytes = stream.ToArray();
+
+        var firstValidation = service.Validate(new MemoryStream(bytes));
+        var secondValidation = service.Validate(new MemoryStream(bytes));
+        var actor = new User { LoginId = "manager", PasswordHash = "hash", Name = "이재학", Email = "jhlee@switchkorea.com", Role = Role.Manager };
+        await service.ImportAsync(firstValidation.ValidationId, actor);
+        await service.ImportAsync(secondValidation.ValidationId, actor);
+
+        Assert.Equal(firstValidation.ValidationId, secondValidation.ValidationId);
+        Assert.Single(await candidates.ListAsync());
+    }
 }
