@@ -2,7 +2,7 @@
   "use strict";
 
   const data = window.SALES_MOCK_DATA;
-  const state = { role: "manager", currentUserId: "u1", view: "dashboard", importStep: 1, networkRootId: "nc-samsung", selectedNetworkCompanyId: "nc-a", networkTab: "basic", networkCollapsedIds: [], networkCompanyMode: "create", dialogType: null };
+  const state = { role: "manager", currentUserId: "u1", view: "dashboard", importStep: 1, networkRootId: "nc-samsung", selectedNetworkCompanyId: "nc-a", networkTab: "basic", networkCollapsedIds: [], networkCompanyMode: "create", selectedResearchCandidateId: "pc1", researchStatus: "all", researchRegion: "all", researchOwner: "all", researchSearch: "", dialogType: null };
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const won = new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 });
@@ -40,6 +40,8 @@
     renderShipments();
     renderNetworkTree();
     renderNetworkCompanyDetail();
+    renderResearchCandidates();
+    renderResearchCandidateDetail();
   }
 
   function showView(name) {
@@ -207,6 +209,123 @@
     $$(".network-tab-content").forEach((panel) => panel.classList.toggle("active", panel.id === tabMap[state.networkTab]));
   }
 
+  const researchStatusLabels = {
+    collected: "수집됨", enriching: "정보 보강 중", reviewPending: "검토 대기", duplicateSuspected: "중복 의심",
+    onHold: "보류", excluded: "제외", approved: "승인", converted: "전환 완료"
+  };
+
+  function researchCandidate(candidateId) {
+    return data.prospectCandidates.find((item) => item.id === candidateId);
+  }
+
+  function renderResearchDashboard() {
+    const candidates = data.prospectCandidates;
+    $("#research-kpi-new").textContent = candidates.filter((item) => ["collected", "enriching"].includes(item.status)).length;
+    $("#research-kpi-review").textContent = candidates.filter((item) => ["reviewPending", "onHold"].includes(item.status)).length;
+    $("#research-kpi-duplicate").textContent = candidates.filter((item) => item.status === "duplicateSuspected").length;
+    $("#research-kpi-approved").textContent = candidates.filter((item) => ["approved", "converted"].includes(item.status)).length;
+  }
+
+  function filteredResearchCandidates() {
+    const query = state.researchSearch.toLowerCase();
+    return data.prospectCandidates.filter((item) => {
+      const text = `${item.name} ${item.domain} ${item.application}`.toLowerCase();
+      return (state.researchStatus === "all" || item.status === state.researchStatus)
+        && (state.researchRegion === "all" || item.region === state.researchRegion)
+        && (state.researchOwner === "all" || item.ownerId === state.researchOwner)
+        && (!query || text.includes(query));
+    });
+  }
+
+  function renderResearchCandidates() {
+    const rows = filteredResearchCandidates();
+    $("#research-result-count").textContent = `${rows.length}개 기업`;
+    $("#research-candidate-table").innerHTML = rows.map((item) => `
+      <tr class="${item.id === state.selectedResearchCandidateId ? "selected" : ""}" data-research-candidate="${item.id}">
+        <td><div class="subcell"><strong>${item.name}</strong><small>${item.domain}</small></div></td>
+        <td><div class="subcell"><strong>${item.country}</strong><small>${item.industry}</small></div></td>
+        <td><span class="research-score ${item.priority}">${item.score}</span></td><td>${item.owner}</td>
+        <td><span class="badge research-status ${item.status}">${researchStatusLabels[item.status]}</span></td>
+      </tr>`).join("") || `<tr><td colspan="5"><div class="network-empty">조건에 맞는 후보가 없습니다.</div></td></tr>`;
+  }
+
+  function renderDuplicateReview() {
+    const candidate = researchCandidate(state.selectedResearchCandidateId);
+    const panel = $("#research-duplicate-review");
+    const visible = candidate?.status === "duplicateSuspected";
+    panel.classList.toggle("is-hidden", !visible);
+    if (!visible) { panel.innerHTML = ""; return; }
+    panel.innerHTML = `<div class="panel-head"><div><h3>중복 후보 비교</h3><p>자동 병합하지 않고 담당자가 판정합니다.</p></div><span class="badge duplicateSuspected">확인 필요</span></div><div class="duplicate-compare"><div><small>신규 후보</small><strong>${candidate.name}</strong><span>${candidate.country} · ${candidate.domain}</span></div><b>↔</b><div><small>기존 영업망</small><strong>${candidate.duplicateName}</strong><span>유럽 · horizon-controls.example</span></div></div><div class="research-actions"><button class="button secondary" data-duplicate-action="dismiss">기존 기업과 중복</button><button class="button primary" data-duplicate-action="new">별도 신규 후보</button></div>`;
+  }
+
+  function renderResearchCandidateDetail() {
+    const candidate = researchCandidate(state.selectedResearchCandidateId) || filteredResearchCandidates()[0];
+    if (!candidate) { $("#research-candidate-detail").innerHTML = `<div class="network-empty">후보를 선택하세요.</div>`; return; }
+    state.selectedResearchCandidateId = candidate.id;
+    const evidence = data.researchEvidence.filter((item) => item.candidateId === candidate.id);
+    const ownerOptions = data.users.filter((item) => item.role === "member").map((item) => `<option value="${item.id}" ${item.id === candidate.ownerId ? "selected" : ""}>${item.name}</option>`).join("");
+    const managerActions = state.role === "manager" ? `<button class="button secondary" data-research-action="excluded">제외</button><button class="button secondary" data-research-action="approved" ${candidate.status === "duplicateSuspected" ? "disabled" : ""}>승인</button>${candidate.status === "approved" ? `<button class="button primary" data-research-action="converted">영업망 전환</button>` : ""}` : "";
+    $("#research-candidate-detail").innerHTML = `
+      <div class="research-detail-head"><div><p class="eyebrow">${candidate.country} · ${candidate.industry}</p><h3>${candidate.name}</h3><a href="${candidate.website}" target="_blank" rel="noreferrer">${candidate.domain} ↗</a></div><div class="research-score-ring" style="--score:${candidate.score}"><strong>${candidate.score}</strong><small>/ 100</small></div></div>
+      <div class="research-detail-meta"><div><span>기업규모</span><strong>${candidate.size}</strong></div><div><span>예상 적용</span><strong>${candidate.application}</strong></div><div><span>조사일</span><strong>${candidate.researchedAt}</strong></div></div>
+      <div class="research-score-breakdown">${["제품 적용", "업종", "공급망", "지역", "규모", "신뢰도"].map((label, index) => `<div><span>${label}</span><b>${candidate.scoreParts[index]}점</b></div>`).join("")}</div>
+      <section class="research-ai"><span>AI 적합성 요약</span><p>${candidate.aiSummary}</p><small>주의: ${candidate.aiRisk}</small></section>
+      <section class="research-evidence"><div class="network-section-head"><h4>조사 근거 ${evidence.length}건</h4><span>출처·조사일 필수</span></div>${evidence.length ? evidence.map((item) => `<a href="${item.url}" target="_blank" rel="noreferrer"><strong>${item.title}</strong><small>${item.observedAt} · 신뢰도 ${item.confidence}</small></a>`).join("") : `<p class="inline-warning">출처가 없어 승인할 수 없습니다.</p>`}</section>
+      <label class="research-owner">담당자<select id="research-owner-select" ${state.role === "manager" ? "" : "disabled"}>${ownerOptions}</select></label>
+      <div class="research-actions"><button class="button secondary" data-research-action="onHold">보류</button>${managerActions}</div>`;
+    renderDuplicateReview();
+  }
+
+  function selectResearchCandidate(candidateId) {
+    if (!researchCandidate(candidateId)) return;
+    state.selectedResearchCandidateId = candidateId;
+    renderResearchCandidates();
+    renderResearchCandidateDetail();
+  }
+
+  function assignResearchCandidate(ownerId) {
+    const candidate = researchCandidate(state.selectedResearchCandidateId);
+    const owner = data.users.find((item) => item.id === ownerId);
+    if (!candidate || !owner || state.role !== "manager") return;
+    candidate.ownerId = owner.id; candidate.owner = owner.name;
+    renderResearchCandidates(); renderResearchCandidateDetail(); showToast(`${owner.name} 담당으로 배정했습니다. (목업)`);
+  }
+
+  function reviewResearchCandidate(nextStatus) {
+    const candidate = researchCandidate(state.selectedResearchCandidateId);
+    if (!candidate) return;
+    if (["approved", "converted", "excluded"].includes(nextStatus) && state.role !== "manager") return;
+    if (nextStatus === "approved" && (candidate.status === "duplicateSuspected" || !data.researchEvidence.some((item) => item.candidateId === candidate.id))) { showToast("중복 판정과 출처 확인 후 승인할 수 있습니다."); return; }
+    candidate.status = nextStatus;
+    if (nextStatus === "converted" && !candidate.networkCompanyId) {
+      candidate.networkCompanyId = `nc-research-${candidate.id}`;
+      data.networkCompanies.push({ id: candidate.networkCompanyId, name: candidate.name, code: "P-AUTO", country: candidate.country, industry: candidate.industry, lifecycleType: "prospect", isOem: false, ownerId: candidate.ownerId, owner: candidate.owner, status: "active", address: "-", note: "잠재고객 리서치 승인 전환" });
+    }
+    renderResearchDashboard(); renderResearchCandidates(); renderResearchCandidateDetail();
+    showToast(`${candidate.name}: ${researchStatusLabels[nextStatus]} 처리했습니다. (목업)`);
+  }
+
+  function resolveResearchDuplicate(decision) {
+    const candidate = researchCandidate(state.selectedResearchCandidateId);
+    if (!candidate || candidate.status !== "duplicateSuspected") return;
+    candidate.status = decision === "new" ? "reviewPending" : "excluded";
+    renderResearchDashboard(); renderResearchCandidates(); renderResearchCandidateDetail();
+    showToast(decision === "new" ? "별도 신규 후보로 유지합니다." : "기존 기업과 중복으로 제외했습니다.");
+  }
+
+  function renderResearchRuns() {
+    $("#research-run-list").innerHTML = data.researchRuns.map((item) => `<div class="research-run"><span class="research-run-kind">${{ scheduled: "예약", manual: "수동", excel: "Excel" }[item.kind]}</span><div><strong>${item.profile}</strong><small>${item.startedAt} · 발견 ${item.discovered} · 보강 ${item.enriched} · 실패 ${item.failed}</small></div><b>${item.apiCalls}회<small>₩${number.format(item.estimatedCost * 1000)}</small></b></div>`).join("");
+  }
+
+  function startResearchRun() {
+    data.researchRuns.unshift({ id: `rr${data.researchRuns.length + 1}`, kind: "manual", profile: "글로벌 스위치 적용기업", startedAt: "2026-10-07 20:10", completedAt: "2026-10-07 20:12", status: "completed", discovered: 7, enriched: 6, failed: 1, apiCalls: 14, estimatedCost: 3.1 });
+    renderResearchRuns(); showToast("즉시 조사를 완료했습니다. 신규 후보 6건을 검토하세요. (목업)");
+  }
+
+  function openProspectImport(open = true) {
+    $("#research-import-panel").classList.toggle("is-hidden", !open);
+  }
+
   function renderTargets() {
     $("#target-table").innerHTML = data.targets.map((item) => {
       const rate = Math.round((item.actual / item.target) * 1000) / 10;
@@ -227,6 +346,10 @@
     renderShipments();
     renderNetworkTree();
     renderNetworkCompanyDetail();
+    renderResearchDashboard();
+    renderResearchCandidates();
+    renderResearchCandidateDetail();
+    renderResearchRuns();
     renderTargets();
     renderUsers();
   }
@@ -396,6 +519,23 @@
     }
   });
   $("#convert-prospect").addEventListener("click", openProspectConversion);
+  $("#research-search").addEventListener("input", (event) => { state.researchSearch = event.target.value; renderResearchCandidates(); });
+  $("#research-region-filter").addEventListener("change", (event) => { state.researchRegion = event.target.value; renderResearchCandidates(); });
+  $("#research-status-filter").addEventListener("change", (event) => { state.researchStatus = event.target.value; renderResearchCandidates(); });
+  $("#research-owner-filter").addEventListener("change", (event) => { state.researchOwner = event.target.value; renderResearchCandidates(); });
+  $("#research-run-now").addEventListener("click", startResearchRun);
+  $("#research-import-open").addEventListener("click", () => openProspectImport(true));
+  $("#research-import-close").addEventListener("click", () => openProspectImport(false));
+  $("#research-import-apply").addEventListener("click", () => { openProspectImport(false); showToast("정상 후보 10건을 검토함에 반영했습니다. (목업)"); });
+  $("#view-research").addEventListener("click", (event) => {
+    const row = event.target.closest("[data-research-candidate]");
+    const action = event.target.closest("[data-research-action]");
+    const duplicate = event.target.closest("[data-duplicate-action]");
+    if (row) selectResearchCandidate(row.dataset.researchCandidate);
+    if (action && !action.disabled) reviewResearchCandidate(action.dataset.researchAction);
+    if (duplicate) resolveResearchDuplicate(duplicate.dataset.duplicateAction);
+  });
+  $("#view-research").addEventListener("change", (event) => { if (event.target.id === "research-owner-select") assignResearchCandidate(event.target.value); });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeDialog(); });
 
   updateImportStep(1);
