@@ -12,6 +12,7 @@ import { ProductPage } from '../features/products/ProductPage'
 import { SettingsPage } from '../features/settings/SettingsPage'
 import { ShipmentPage } from '../features/shipments/ShipmentPage'
 import { NetworkPage } from '../features/network/NetworkPage'
+import { ResearchPage } from '../features/research/ResearchPage'
 import { AuthSessionProvider, useAuth } from './AuthSession'
 
 const SalesApiContext = createContext<SalesApi | null>(null)
@@ -30,6 +31,7 @@ const navigation = [
   { path: '/dashboard', label: '대시보드', managerOnly: false },
   { path: '/customers', label: '거래처 관리', managerOnly: false },
   { path: '/network', label: '영업망 관리', managerOnly: false },
+  { path: '/research', label: '잠재고객 리서치', managerOnly: false },
   { path: '/catalog', label: '품목·단가 관리', managerOnly: false },
   { path: '/shipments', label: '출고·매출 관리', managerOnly: false },
   { path: '/imports', label: 'Excel 가져오기', managerOnly: false },
@@ -58,6 +60,7 @@ function AppShell() {
                 <Route path="/dashboard" element={<DashboardPage />} />
                 <Route path="/customers" element={<CustomerPage />} />
                 <Route path="/network" element={<NetworkPage />} />
+                <Route path="/research" element={<ResearchPage />} />
                 <Route path="/catalog" element={<ProductPage />} />
                 <Route path="/shipments" element={<ShipmentPage />} />
                 <Route path="/imports" element={<ImportWizard />} />

@@ -1,5 +1,5 @@
 import type { SalesApi } from './SalesApi'
-import type { AssignmentChangeInput, AuditLog, CompanyAssignment, CompanyContact, CompanyRelationship, ContactInput, Customer, DailyRate, DashboardQuery, DashboardSummary, ImportRequest, ImportValidation, ListQuery, LoginRequest, MonthlyRate, NetworkCompany, NetworkCompanyInput, NetworkQuery, NetworkTreeNode, Price, Product, ProspectConversionInput, RelationshipInput, SalesTarget, Shipment, User } from './contracts'
+import type { AssignmentChangeInput, AuditLog, CompanyAssignment, CompanyContact, CompanyRelationship, ContactInput, Customer, DailyRate, DashboardQuery, DashboardSummary, ImportRequest, ImportValidation, ListQuery, LoginRequest, MonthlyRate, NetworkCompany, NetworkCompanyInput, NetworkQuery, NetworkTreeNode, Price, Product, ProspectAssignmentInput, ProspectCandidate, ProspectCandidateQuery, ProspectConversionInput, ProspectReviewInput, RelationshipInput, ResearchRun, ResearchRunKind, ResearchSummary, ResearchTargetProfile, SalesTarget, Shipment, User } from './contracts'
 
 type Create<T> = Omit<T, 'id' | 'version'>
 type Update<T> = Partial<Create<T>> & { version: number }
@@ -76,6 +76,16 @@ export class HttpSalesApi implements SalesApi {
 
   async listCompanyAssignments(companyId: string) { const rows = await this.request<any[]>(`/api/network/companies/${companyId}/assignments`); return rows.map((row) => this.mapAssignment(row)) }
   async changeCompanyAssignment(companyId: string, input: AssignmentChangeInput) { return this.mapAssignment(await this.request<any>(`/api/network/companies/${companyId}/assignments`, { method: 'POST', body: JSON.stringify(input) })) }
+
+  private researchApiPending(): never { throw new SalesApiError(501, '잠재고객 리서치 Back-end 연결은 다음 구현 단계에서 제공됩니다.') }
+  getResearchSummary(): Promise<ResearchSummary> { return Promise.reject(this.researchApiPending()) }
+  listProspectCandidates(_query?: ProspectCandidateQuery): Promise<ProspectCandidate[]> { return Promise.reject(this.researchApiPending()) }
+  getProspectCandidate(_id: string): Promise<ProspectCandidate> { return Promise.reject(this.researchApiPending()) }
+  saveResearchTargetProfile(_input: ResearchTargetProfile & { expectedVersion: number }): Promise<ResearchTargetProfile> { return Promise.reject(this.researchApiPending()) }
+  startResearchRun(_kind: ResearchRunKind, _profileId?: string): Promise<ResearchRun> { return Promise.reject(this.researchApiPending()) }
+  assignProspectCandidate(_id: string, _input: ProspectAssignmentInput): Promise<ProspectCandidate> { return Promise.reject(this.researchApiPending()) }
+  reviewProspectCandidate(_id: string, _input: ProspectReviewInput): Promise<ProspectCandidate> { return Promise.reject(this.researchApiPending()) }
+  convertProspectCandidate(_id: string, _expectedVersion: number): Promise<ProspectCandidate> { return Promise.reject(this.researchApiPending()) }
 
   async listProducts(query?: ListQuery) { const rows = (await this.request<any[]>('/api/products')).map(x => this.mapProduct(x)); return rows.filter(x => (!query?.search || `${x.code} ${x.name}`.toLowerCase().includes(query.search.toLowerCase())) && (!query?.status || x.status === query.status)) }
   async getProduct(id: string) { const value = (await this.listProducts()).find(x => x.id === id); if (!value) throw new SalesApiError(404, '품목을 찾을 수 없습니다.'); return value }
