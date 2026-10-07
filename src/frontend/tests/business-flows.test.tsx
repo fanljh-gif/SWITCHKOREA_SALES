@@ -37,3 +37,14 @@ it('keeps invalid import rows out of the commit request', async () => {
   expect(screen.getByText('4행 · 수량 · 수량은 0보다 커야 합니다.')).toBeVisible()
   expect(screen.getByRole('button', { name: '최종 반영' })).toBeDisabled()
 })
+
+it('converts an evidence-backed research candidate into the shared network once', async () => {
+  const api = new MockSalesApi()
+  const before = await api.getProspectCandidate('prospect-hanul')
+  const approved = await api.reviewProspectCandidate(before.id, { decision: 'approve', expectedVersion: before.version })
+  const first = await api.convertProspectCandidate(approved.id, approved.version)
+  const second = await api.convertProspectCandidate(before.id, first.version)
+  expect(first.status).toBe('converted')
+  expect(second.networkCompanyId).toBe(first.networkCompanyId)
+  expect((await api.getNetworkCompany(first.networkCompanyId!)).lifecycleType).toBe('prospect')
+})

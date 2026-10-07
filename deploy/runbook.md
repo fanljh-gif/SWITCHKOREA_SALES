@@ -6,6 +6,16 @@
 
 테스트 환경에는 가상 데이터만 입력한다. 무료 데이터베이스는 30일 내 종료하고, 테스트 완료 후 Web Service와 PostgreSQL을 삭제한다. 초기 비밀번호와 외부 데이터베이스 URL은 Git, Render 로그, 이 문서에 기록하지 않는다.
 
+### 잠재고객 리서치 자동화
+
+- 기본값은 `Research__Provider=Disabled`다. 화면·Excel 검토는 외부 API 없이 사용할 수 있다.
+- 자동 웹 리서치를 사용할 때만 Render Secret에 `Research__ApiKey`를 입력하고 `Research__Provider=OpenAI`로 변경한다. 키 값은 Git, DB, 문서, 로그에 남기지 않는다.
+- 기본 예약은 매주 월요일 09:00(Asia/Seoul), 월 비용 한도는 100,000원이다. 70%·90%에서 경고하며 100%가 되면 예약 실행만 중지한다. 팀장 수동 실행은 계속 가능하다.
+- 외부로 보내는 값은 지역·업종·제품 키워드·검색 건수뿐이다. 고객 연락처, 매출, 단가, 인증정보는 전송하지 않는다.
+- 출처 URL과 조사일이 없는 결과는 저장·승인하지 않는다. AI 결과는 추천 자료이며 영업망 전환은 팀장이 직접 승인한다.
+- 공급자 장애 시 기존 후보와 다른 영업관리 기능은 계속 사용할 수 있다. 실패 실행은 `partial` 상태에서 재처리한다.
+- 공급자를 즉시 중지하려면 `Research__Provider=Disabled`로 되돌리고 Web Service를 재시작한다. 데이터베이스 롤백은 먼저 백업을 확보한 후 `AddProspectResearch` 직전 마이그레이션까지만 수행한다.
+
 ### Render Blueprint 및 계정 초기화
 
 1. 비공개 GitHub 저장소에서 루트의 `render.yaml`을 Blueprint로 적용한다. 미리보기에는 `switch-korea-sales-test` Web Service와 `switch-korea-sales-test-db` PostgreSQL만 있어야 한다.
@@ -113,3 +123,4 @@ IIS 앱 풀은 AlwaysRunning이며, HTTP 80은 ASP.NET Core의 HTTPS 전환 경�
 - CIDR 외 80/443 차단 및 외부 5432 미노출 확인
 - 백업 생성·SHA-256·격리 복원 건수 일치
 - 팀장 최종 승인과 승인 시각 기록
+- 리서치 API 키 미노출, 월 한도, 예약 시각, 부분실패 재처리 및 승인 근거 확인

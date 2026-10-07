@@ -22,11 +22,31 @@ using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Migrations.Operations;
 using SalesManagement.InMemory.Repositories;
+using SalesManagement.Core.Research;
 
 namespace SalesManagement.DbTests;
 
 public sealed class EndToEndTests
 {
+    [Fact]
+    public async Task Research_Evidence_To_Manager_Approval_Persists_One_Network_Prospect()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:"); await connection.OpenAsync();
+        await using var db = new SalesDbContext(new DbContextOptionsBuilder<SalesDbContext>().UseSqlite(connection).Options); await db.Database.EnsureCreatedAsync();
+        var manager = new User { LoginId = "manager-research", PasswordHash = "hash", Name = "이재학", Email = "jhlee@switchkorea.com", Role = Role.Manager }; db.Users.Add(manager); await db.SaveChangesAsync();
+        var profiles = new ResearchTargetProfileRepository(db); var runs = new ResearchRunRepository(db); var candidates = new ProspectCandidateRepository(db); var evidence = new ResearchEvidenceRepository(db);
+        var profile = await profiles.AddAsync(new ResearchTargetProfile { Name = "Global E2E" });
+        var run = await runs.AddAsync(new ResearchRun { ResearchTargetProfileId = profile.Id, Kind = ResearchRunKind.Manual, Status = ResearchRunStatus.Completed });
+        var candidate = await candidates.AddAsync(new ProspectCandidate { ResearchRunId = run.Id, ProviderResultId = "e2e-provider-1", CompanyName = "Acme Controls", NormalizedCompanyName = "acmecontrols", Country = "US", Region = "미국", Industry = "산업제어", Domain = "acme.example", NormalizedDomain = "acme.example", Website = "https://acme.example", Status = ProspectStatus.ReviewPending });
+        await evidence.AddAsync(new ResearchEvidence { ProspectCandidateId = candidate.Id, SourceUrl = "https://acme.example/products", Title = "Products", ObservedDate = new DateOnly(2026, 10, 8), Summary = "Public switch application", SourceHash = "e2e-evidence-1" });
+        var networks = new NetworkCompanyRepository(db); var customers = new CustomerRepository(db); var assignments = new CompanyAssignmentRepository(db); var users = new UserRepository(db); var audits = new AuditRepository(db);
+        var review = new ProspectReviewService(candidates, evidence, new DuplicateMatchRepository(db), new ProspectActivityRepository(db), new ProspectConversionRepository(db), new NetworkCompanyService(networks, customers, assignments, users, audits, new PostgresTransactionRunner(db)));
+        var first = await review.ApproveAndConvertAsync(candidate.Id, candidate.Version, manager);
+        var second = await review.ApproveAndConvertAsync(candidate.Id, first.Candidate.Version, manager);
+        Assert.Equal(first.NetworkCompany.Id, second.NetworkCompany.Id); Assert.Equal(LifecycleType.Prospect, first.NetworkCompany.LifecycleType);
+        Assert.Single(await db.ProspectConversions.ToArrayAsync()); Assert.Single(await db.NetworkCompanies.Where(x => x.Id == first.NetworkCompany.Id).ToArrayAsync());
+    }
+
     [Fact]
     public async Task Existing_Customers_Are_Backfilled_Exactly_Once()
     {
