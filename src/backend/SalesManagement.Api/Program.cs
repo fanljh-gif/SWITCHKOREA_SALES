@@ -16,6 +16,7 @@ using SalesManagement.Core.Network;
 using SalesManagement.Core.Prices;
 using SalesManagement.Core.Products;
 using SalesManagement.Core.Rates;
+using SalesManagement.Core.Research;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Shipments;
 using SalesManagement.Core.Targets;
@@ -48,6 +49,11 @@ builder.Services.AddScoped<NetworkRelationshipService>();
 builder.Services.AddScoped<NetworkTreeService>();
 builder.Services.AddScoped<CompanyContactService>();
 builder.Services.AddScoped<CompanyAssignmentService>();
+builder.Services.AddScoped<DuplicateDetectionService>();
+builder.Services.AddScoped<ProspectReviewService>();
+builder.Services.AddScoped<ResearchRunService>();
+builder.Services.AddSingleton<ProspectExcelService>();
+builder.Services.AddSingleton<IProspectResearchProvider, DisabledProspectResearchProvider>();
 builder.Services.AddSalesCookieAuthentication();
 builder.Services.AddAuthorization();
 
@@ -83,6 +89,7 @@ app.MapDashboardEndpoints();
 app.MapImportEndpoints();
 app.MapAdminEndpoints();
 app.MapNetworkEndpoints();
+app.MapResearchEndpoints();
 app.MapFallbackToFile("index.html");
 app.Run();
 

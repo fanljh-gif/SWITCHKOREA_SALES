@@ -64,6 +64,14 @@ public static class ProductionRuntimeExtensions
         services.AddSingleton<ICompanyRelationshipRepository, InMemoryCompanyRelationshipRepository>();
         services.AddSingleton<ICompanyContactRepository, InMemoryCompanyContactRepository>();
         services.AddSingleton<ICompanyAssignmentRepository, InMemoryCompanyAssignmentRepository>();
+        services.AddSingleton<IProspectCandidateRepository, InMemoryProspectCandidateRepository>();
+        services.AddSingleton<IResearchEvidenceRepository, InMemoryResearchEvidenceRepository>();
+        services.AddSingleton<IProspectAssessmentRepository, InMemoryProspectAssessmentRepository>();
+        services.AddSingleton<IDuplicateMatchRepository, InMemoryDuplicateMatchRepository>();
+        services.AddSingleton<IProspectActivityRepository, InMemoryProspectActivityRepository>();
+        services.AddSingleton<IProspectConversionRepository, InMemoryProspectConversionRepository>();
+        services.AddSingleton<IResearchTargetProfileRepository, InMemoryResearchTargetProfileRepository>();
+        services.AddSingleton<IResearchRunRepository, InMemoryResearchRunRepository>();
         services.AddSingleton<ITransactionRunner>(provider => new InMemoryTransactionRunner(
             (IInMemoryTransactionalStore)provider.GetRequiredService<INetworkCompanyRepository>(),
             (IInMemoryTransactionalStore)provider.GetRequiredService<ICompanyAssignmentRepository>(),
