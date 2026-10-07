@@ -277,6 +277,135 @@ export interface ProspectConversionInput {
   expectedVersion: number
 }
 
+export type ProspectCandidateStatus = 'collected' | 'enriching' | 'reviewPending' | 'duplicateSuspected' | 'onHold' | 'excluded' | 'approved' | 'converted'
+export type ResearchRunKind = 'manual' | 'scheduled' | 'excel'
+export type ProspectPriority = 'high' | 'normal' | 'low'
+export type ResearchConfidence = 'high' | 'medium' | 'low'
+
+export interface ResearchTargetProfile {
+  id: string
+  name: string
+  regions: string[]
+  industries: string[]
+  includeKeywords: string[]
+  excludeKeywords: string[]
+  maxSearchResults: number
+  maxAiAnalyses: number
+  isActive: boolean
+  nextRunAt?: string
+  version: number
+}
+
+export interface ResearchRun {
+  id: string
+  profileId: string
+  kind: ResearchRunKind
+  status: 'queued' | 'running' | 'partial' | 'completed' | 'failed'
+  startedAt: string
+  completedAt?: string
+  discoveredCount: number
+  enrichedCount: number
+  failedCount: number
+  apiCallCount: number
+  costKrw: number
+  errorSummary?: string
+}
+
+export interface ResearchEvidence {
+  id: string
+  candidateId: string
+  title: string
+  url: string
+  observedAt: string
+  summary: string
+  confidence: ResearchConfidence
+  sourceHash: string
+}
+
+export interface ProspectScore {
+  total: number
+  productFit: number
+  industryFit: number
+  supplyChainFit: number
+  regionFit: number
+  companyPotential: number
+  evidenceQuality: number
+  priority: ProspectPriority
+  ruleVersion: string
+  assessedAt: string
+}
+
+export interface AiAssessment {
+  summary: string
+  recommendation: string
+  risks: string[]
+  model: string
+  generatedAt: string
+}
+
+export interface DuplicateMatch {
+  id: string
+  candidateId: string
+  targetType: 'candidate' | 'networkCompany' | 'customer'
+  targetId: string
+  targetName: string
+  similarity: number
+  reasons: string[]
+  decision: 'pending' | 'duplicate' | 'distinct'
+}
+
+export interface ProspectCandidate {
+  id: string
+  companyName: string
+  englishName?: string
+  country: string
+  region: string
+  industry: string
+  companySize: string
+  domain: string
+  website: string
+  products: string[]
+  applications: string[]
+  ownerId?: string
+  status: ProspectCandidateStatus
+  discoveredBy: ResearchRunKind
+  runId: string
+  score: ProspectScore
+  aiAssessment?: AiAssessment
+  evidence: ResearchEvidence[]
+  duplicateMatches: DuplicateMatch[]
+  networkCompanyId?: string
+  version: number
+}
+
+export interface ProspectCandidateQuery {
+  search?: string
+  region?: string
+  industry?: string
+  status?: ProspectCandidateStatus
+  ownerId?: string
+  runId?: string
+}
+
+export interface ResearchSummary {
+  statusCounts: Record<ProspectCandidateStatus, number>
+  monthlyUsage: { apiCallCount: number; costKrw: number; limitKrw: number; percent: number }
+  targetProfile: ResearchTargetProfile
+  recentRuns: ResearchRun[]
+  partialError?: string
+}
+
+export interface ProspectAssignmentInput {
+  ownerId: string
+  expectedVersion: number
+}
+
+export interface ProspectReviewInput {
+  decision: 'onHold' | 'exclude' | 'approve' | 'distinct' | 'duplicate'
+  expectedVersion: number
+  note?: string
+}
+
 export interface ImportRequest {
   kind: 'customer' | 'product' | 'price' | 'shipment'
   file: File

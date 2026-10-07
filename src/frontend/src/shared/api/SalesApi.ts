@@ -20,8 +20,16 @@ import type {
   NetworkTreeNode,
   Price,
   Product,
+  ProspectAssignmentInput,
+  ProspectCandidate,
+  ProspectCandidateQuery,
   ProspectConversionInput,
+  ProspectReviewInput,
   RelationshipInput,
+  ResearchRun,
+  ResearchRunKind,
+  ResearchSummary,
+  ResearchTargetProfile,
   SalesTarget,
   Shipment,
   User,
@@ -67,6 +75,15 @@ export interface SalesApi {
 
   listCompanyAssignments(companyId: string): Promise<CompanyAssignment[]>
   changeCompanyAssignment(companyId: string, input: AssignmentChangeInput): Promise<CompanyAssignment>
+
+  getResearchSummary(): Promise<ResearchSummary>
+  listProspectCandidates(query?: ProspectCandidateQuery): Promise<ProspectCandidate[]>
+  getProspectCandidate(id: string): Promise<ProspectCandidate>
+  saveResearchTargetProfile(input: ResearchTargetProfile & { expectedVersion: number }): Promise<ResearchTargetProfile>
+  startResearchRun(kind: ResearchRunKind, profileId?: string): Promise<ResearchRun>
+  assignProspectCandidate(id: string, input: ProspectAssignmentInput): Promise<ProspectCandidate>
+  reviewProspectCandidate(id: string, input: ProspectReviewInput): Promise<ProspectCandidate>
+  convertProspectCandidate(id: string, expectedVersion: number): Promise<ProspectCandidate>
 
   listProducts(query?: ListQuery): Promise<Product[]>
   getProduct(id: string): Promise<Product>

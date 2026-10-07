@@ -22,8 +22,16 @@ import type {
   NetworkTreeNode,
   Price,
   Product,
+  ProspectAssignmentInput,
+  ProspectCandidate,
+  ProspectCandidateQuery,
   ProspectConversionInput,
+  ProspectReviewInput,
   RelationshipInput,
+  ResearchRun,
+  ResearchRunKind,
+  ResearchSummary,
+  ResearchTargetProfile,
   SalesTarget,
   Shipment,
   User,
@@ -38,6 +46,9 @@ export class MockSalesApi implements SalesApi {
   private networkRelationships: CompanyRelationship[]
   private companyContacts: CompanyContact[]
   private companyAssignments: CompanyAssignment[]
+  private researchTargetProfile: ResearchTargetProfile
+  private researchRuns: ResearchRun[]
+  private prospectCandidates: ProspectCandidate[]
   private products: Product[]
   private prices: Price[]
   private shipments: Shipment[]
@@ -108,6 +119,38 @@ export class MockSalesApi implements SalesApi {
       { id: 'na-lg', companyId: 'nc-lg', userId: 'u1', validFrom: '2025-01-01', isCurrent: true, version: 1 },
       { id: 'na-shared', companyId: 'nc-shared', userId: 'u2', validFrom: '2025-01-01', isCurrent: true, version: 1 },
       { id: 'na-prospect', companyId: 'nc-prospect', userId: 'u3', validFrom: '2026-01-01', isCurrent: true, version: 1 },
+    ]
+    this.researchTargetProfile = {
+      id: 'research-profile-global', name: '글로벌 스위치 적용기업',
+      regions: ['한국', '유럽', '미국', '중국', '인도', '베트남', '동남아'],
+      industries: ['전자', '가전', '자동차 전장', '산업제어', 'IoT', '의료기기'],
+      includeKeywords: ['tact switch', 'micro switch', 'control panel', 'HMI'],
+      excludeKeywords: [], maxSearchResults: 100, maxAiAnalyses: 40, isActive: true,
+      nextRunAt: '2026-10-12T09:00:00+09:00', version: 1,
+    }
+    this.researchRuns = [
+      { id: 'research-run-scheduled', profileId: this.researchTargetProfile.id, kind: 'scheduled', status: 'partial', startedAt: '2026-10-05T09:00:00+09:00', completedAt: '2026-10-05T09:14:00+09:00', discoveredCount: 38, enrichedCount: 31, failedCount: 2, apiCallCount: 74, costKrw: 18_600, errorSummary: '2개 공개 페이지 응답 지연' },
+      { id: 'research-run-excel', profileId: this.researchTargetProfile.id, kind: 'excel', status: 'completed', startedAt: '2026-10-06T14:20:00+09:00', completedAt: '2026-10-06T14:24:00+09:00', discoveredCount: 12, enrichedCount: 10, failedCount: 2, apiCallCount: 18, costKrw: 4_200 },
+    ]
+    const score = (total: number): ProspectCandidate['score'] => ({
+      total, productFit: Math.min(30, Math.round(total * .34)), industryFit: Math.min(20, Math.round(total * .22)), supplyChainFit: Math.min(20, Math.round(total * .2)), regionFit: Math.min(10, Math.round(total * .1)), companyPotential: Math.min(10, Math.round(total * .08)), evidenceQuality: Math.min(10, Math.round(total * .06)), priority: total >= 70 ? 'high' : total >= 50 ? 'normal' : 'low', ruleVersion: '2026.10', assessedAt: '2026-10-06T16:00:00+09:00',
+    })
+    this.prospectCandidates = [
+      {
+        id: 'prospect-hanul', companyName: 'Hanul Mobility Systems', country: '대한민국', region: '한국', industry: '자동차 전장', companySize: '중견기업', domain: 'hanul-mobility.example', website: 'https://hanul-mobility.example', products: ['차량용 조작 모듈'], applications: ['Detector', 'Micro Switch'], ownerId: 'u2', status: 'reviewPending', discoveredBy: 'scheduled', runId: 'research-run-scheduled', score: score(86), aiAssessment: { summary: '차량용 조작 모듈을 자체 설계하며 방수형 마이크로 스위치 적용 가능성이 높습니다.', recommendation: '구매·설계 담당자 확인 후 접촉을 권장합니다.', risks: ['공식 구매 담당 정보 미확인'], model: 'mock-research-v1', generatedAt: '2026-10-06T16:00:00+09:00' }, evidence: [
+          { id: 'evidence-hanul-1', candidateId: 'prospect-hanul', title: 'Automotive console product overview', url: 'https://hanul-mobility.example/products/console', observedAt: '2026-10-06', summary: '차량용 콘솔 조작 모듈 제품군 공개', confidence: 'high', sourceHash: 'sha256:hanul-console' },
+          { id: 'evidence-hanul-2', candidateId: 'prospect-hanul', title: 'Company profile', url: 'https://hanul-mobility.example/company', observedAt: '2026-10-06', summary: '자동차 전장 설계·제조 기업', confidence: 'high', sourceHash: 'sha256:hanul-company' },
+        ], duplicateMatches: [], version: 1,
+      },
+      {
+        id: 'prospect-nordlicht', companyName: 'Nordlicht Hausgeräte GmbH', country: '독일', region: '유럽', industry: '가전', companySize: '대기업', domain: 'nordlicht-home.example', website: 'https://nordlicht-home.example', products: ['Laundry door modules'], applications: ['Micro Switch'], ownerId: 'u3', status: 'duplicateSuspected', discoveredBy: 'scheduled', runId: 'research-run-scheduled', score: score(78), aiAssessment: { summary: '가전 도어 인터록에 마이크로 스위치 수요가 예상됩니다.', recommendation: '기존 유럽 법인과의 관계를 먼저 확인합니다.', risks: ['기존 Horizon Controls Europe과 회사명 유사'], model: 'mock-research-v1', generatedAt: '2026-10-06T16:10:00+09:00' }, evidence: [
+          { id: 'evidence-nordlicht-1', candidateId: 'prospect-nordlicht', title: 'Laundry door modules', url: 'https://nordlicht-home.example/components', observedAt: '2026-10-06', summary: '가전 도어 모듈 제품 정보', confidence: 'medium', sourceHash: 'sha256:nordlicht-components' },
+        ], duplicateMatches: [
+          { id: 'duplicate-nordlicht-1', candidateId: 'prospect-nordlicht', targetType: 'networkCompany', targetId: 'nc-horizon-eu', targetName: 'Horizon Controls Europe', similarity: 0.82, reasons: ['회사명 유사', '유럽 가전 공급망'], decision: 'pending' },
+        ], version: 1,
+      },
+      { id: 'prospect-aster', companyName: 'Aster Control Labs', country: '미국', region: '미국', industry: '산업제어', companySize: '중소기업', domain: 'aster-controls.example', website: 'https://aster-controls.example', products: ['Control panel'], applications: ['Tact Switch'], ownerId: 'u4', status: 'onHold', discoveredBy: 'excel', runId: 'research-run-excel', score: score(66), evidence: [{ id: 'evidence-aster-1', candidateId: 'prospect-aster', title: 'Industrial controls', url: 'https://aster-controls.example/products', observedAt: '2026-10-06', summary: '산업제어 패널 소개', confidence: 'medium', sourceHash: 'sha256:aster-products' }], duplicateMatches: [], version: 1 },
+      { id: 'prospect-vina', companyName: 'Vina Appliance Components', country: '베트남', region: '베트남', industry: '가전', companySize: '중견기업', domain: 'vina-appliance.example', website: 'https://vina-appliance.example', products: ['Appliance modules'], applications: ['Micro Switch'], ownerId: 'u3', status: 'approved', discoveredBy: 'excel', runId: 'research-run-excel', score: score(82), evidence: [{ id: 'evidence-vina-1', candidateId: 'prospect-vina', title: 'Appliance component catalog', url: 'https://vina-appliance.example/catalog', observedAt: '2026-10-06', summary: '가전 부품 카탈로그', confidence: 'high', sourceHash: 'sha256:vina-catalog' }], duplicateMatches: [], version: 1 },
     ]
     this.prices = [
       { id: 'pr1', customerId: 'c1', productId: 'p1', currency: 'KRW', unitPrice: 3200, validFrom: '2026-10-01', version: 1 },
@@ -320,6 +363,101 @@ export class MockSalesApi implements SalesApi {
     this.companyAssignments.push(next)
     company.currentOwnerId = input.userId; company.version += 1
     return next
+  }
+
+  private requireProspectCandidate(id: string): ProspectCandidate {
+    const row = this.prospectCandidates.find((item) => item.id === id)
+    if (!row) throw new SalesApiError(404, '잠재고객 후보를 찾을 수 없습니다.')
+    return row
+  }
+
+  private requireProspectVersion(candidate: ProspectCandidate, expectedVersion: number) {
+    if (candidate.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 후보를 수정했습니다.')
+  }
+
+  private requireProspectEdit(candidate: ProspectCandidate) {
+    if (!this.currentUser) throw new SalesApiError(401, '로그인이 필요합니다.')
+    if (this.currentUser.role !== 'manager' && candidate.ownerId !== this.currentUser.id) throw new SalesApiError(403, '다른 담당자의 후보는 수정할 수 없습니다.')
+  }
+
+  async getResearchSummary(): Promise<ResearchSummary> {
+    const statuses: ProspectCandidate['status'][] = ['collected', 'enriching', 'reviewPending', 'duplicateSuspected', 'onHold', 'excluded', 'approved', 'converted']
+    const statusCounts = Object.fromEntries(statuses.map((status) => [status, this.prospectCandidates.filter((item) => item.status === status).length])) as ResearchSummary['statusCounts']
+    const apiCallCount = this.researchRuns.reduce((sum, run) => sum + run.apiCallCount, 0)
+    const costKrw = this.researchRuns.reduce((sum, run) => sum + run.costKrw, 0)
+    return { statusCounts, monthlyUsage: { apiCallCount, costKrw, limitKrw: 36_800, percent: Math.round(costKrw / 36_800 * 100) }, targetProfile: { ...this.researchTargetProfile }, recentRuns: this.researchRuns.map((run) => ({ ...run })), partialError: this.researchRuns.some((run) => run.status === 'partial') ? '일부 공개 페이지를 수집하지 못했습니다.' : undefined }
+  }
+
+  async listProspectCandidates(query?: ProspectCandidateQuery): Promise<ProspectCandidate[]> {
+    return this.prospectCandidates.filter((row) => {
+      if (query?.region && row.region !== query.region) return false
+      if (query?.industry && row.industry !== query.industry) return false
+      if (query?.status && row.status !== query.status) return false
+      if (query?.ownerId && row.ownerId !== query.ownerId) return false
+      if (query?.runId && row.runId !== query.runId) return false
+      return !query?.search || `${row.companyName} ${row.domain} ${row.products.join(' ')} ${row.applications.join(' ')}`.toLowerCase().includes(query.search.toLowerCase())
+    }).map((row) => ({ ...row }))
+  }
+
+  async getProspectCandidate(id: string): Promise<ProspectCandidate> { return { ...this.requireProspectCandidate(id) } }
+
+  async saveResearchTargetProfile(input: ResearchTargetProfile & { expectedVersion: number }): Promise<ResearchTargetProfile> {
+    if (this.currentUser?.role !== 'manager') throw new SalesApiError(403, '팀장만 타깃 프로필을 수정할 수 있습니다.')
+    if (input.expectedVersion !== this.researchTargetProfile.version) throw new SalesApiError(409, '다른 사용자가 먼저 타깃 프로필을 수정했습니다.')
+    const { expectedVersion: _expectedVersion, ...profile } = input
+    this.researchTargetProfile = { ...profile, version: profile.version + 1 }
+    return { ...this.researchTargetProfile }
+  }
+
+  async startResearchRun(kind: ResearchRunKind, profileId = this.researchTargetProfile.id): Promise<ResearchRun> {
+    if (this.currentUser?.role !== 'manager') throw new SalesApiError(403, '팀장만 리서치를 실행할 수 있습니다.')
+    const row: ResearchRun = { id: crypto.randomUUID(), profileId, kind, status: 'queued', startedAt: new Date().toISOString(), discoveredCount: 0, enrichedCount: 0, failedCount: 0, apiCallCount: 0, costKrw: 0 }
+    this.researchRuns.unshift(row)
+    return { ...row }
+  }
+
+  async assignProspectCandidate(id: string, input: ProspectAssignmentInput): Promise<ProspectCandidate> {
+    if (this.currentUser?.role !== 'manager') throw new SalesApiError(403, '팀장만 후보 담당자를 변경할 수 있습니다.')
+    const row = this.requireProspectCandidate(id)
+    this.requireProspectVersion(row, input.expectedVersion)
+    row.ownerId = input.ownerId; row.version += 1
+    return { ...row }
+  }
+
+  async reviewProspectCandidate(id: string, input: ProspectReviewInput): Promise<ProspectCandidate> {
+    const row = this.requireProspectCandidate(id)
+    this.requireProspectEdit(row)
+    this.requireProspectVersion(row, input.expectedVersion)
+    if (input.decision === 'approve') {
+      if (this.currentUser?.role !== 'manager') throw new SalesApiError(403, '팀장만 후보를 승인할 수 있습니다.')
+      if (!row.evidence.length || row.evidence.some((item) => !item.url || !item.observedAt)) throw new SalesApiError(422, '출처 URL과 조사일이 있는 근거가 필요합니다.')
+      if (row.duplicateMatches.some((item) => item.decision === 'pending')) throw new SalesApiError(422, '중복 후보 판정을 먼저 완료해 주세요.')
+      row.status = 'approved'
+    } else if (input.decision === 'distinct') {
+      row.duplicateMatches = row.duplicateMatches.map((item) => ({ ...item, decision: 'distinct' }))
+      row.status = 'reviewPending'
+    } else if (input.decision === 'duplicate') {
+      row.duplicateMatches = row.duplicateMatches.map((item) => ({ ...item, decision: 'duplicate' }))
+      row.status = 'excluded'
+    } else {
+      row.status = input.decision === 'exclude' ? 'excluded' : 'onHold'
+    }
+    row.version += 1
+    return { ...row }
+  }
+
+  async convertProspectCandidate(id: string, expectedVersion: number): Promise<ProspectCandidate> {
+    const row = this.requireProspectCandidate(id)
+    if (this.currentUser?.role !== 'manager') throw new SalesApiError(403, '팀장만 승인 후보를 영업망으로 전환할 수 있습니다.')
+    if (row.status === 'converted' && row.networkCompanyId) return { ...row }
+    this.requireProspectVersion(row, expectedVersion)
+    if (row.status !== 'approved') throw new SalesApiError(422, '승인된 후보만 영업망으로 전환할 수 있습니다.')
+    const networkCompanyId = `nc-research-${row.id.replace(/^prospect-/, '')}`
+    if (!this.networkCompanies.some((company) => company.id === networkCompanyId)) {
+      this.networkCompanies.push({ id: networkCompanyId, companyName: row.companyName, country: row.country, industry: row.industry, lifecycleType: 'prospect', isOem: false, customerId: null, currentOwnerId: row.ownerId ?? this.currentUser.id, status: 'active', version: 1 })
+    }
+    row.networkCompanyId = networkCompanyId; row.status = 'converted'; row.version += 1
+    return { ...row }
   }
 
   async listProducts(_query?: ListQuery): Promise<Product[]> { return [...this.products] }
