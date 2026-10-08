@@ -411,3 +411,193 @@ export interface ImportRequest {
   file: File
   columnMap: Record<string, string>
 }
+
+export type InquiryStatus = 'received' | 'assigned' | 'responding' | 'quoting' | 'answered' | 'closed'
+export type QuoteStatus = 'draft' | 'approvalRequested' | 'approved' | 'rejected' | 'sent' | 'won' | 'lost' | 'onHold'
+export type QuoteTaxType = 'exclusive' | 'inclusive' | 'exempt'
+export type QuoteLanguage = 'ko' | 'en'
+export type QuoteTradeType = 'domestic' | 'export'
+export type QuoteResult = 'won' | 'lost' | 'onHold'
+
+export interface InquiryActivityDto {
+  id: string
+  inquiryId: string
+  kind: 'response' | 'memo' | 'status' | 'assignment'
+  body: string
+  actorId: string
+  occurredAt: string
+}
+
+export interface InquiryAttachmentDto {
+  id: string
+  inquiryId: string
+  fileName: string
+  contentType: string
+  size: number
+  uploadedBy: string
+  uploadedAt: string
+}
+
+export interface CustomerInquiryDto {
+  id: string
+  inquiryNumber: string
+  title: string
+  customerId: string
+  customerName: string
+  contactName: string
+  contactEmail?: string
+  ownerId: string
+  receivedAt: string
+  responseDueAt: string
+  status: InquiryStatus
+  summary: string
+  resultMemo?: string
+  activities: InquiryActivityDto[]
+  attachments: InquiryAttachmentDto[]
+  linkedQuoteIds: string[]
+  version: number
+}
+
+export interface CustomerInquiryInput {
+  title: string
+  customerId: string
+  contactName: string
+  contactEmail?: string
+  ownerId: string
+  receivedAt: string
+  responseDueAt: string
+  summary: string
+}
+
+export interface InquiryQuery {
+  search?: string
+  ownerId?: string
+  customerId?: string
+  status?: InquiryStatus
+  overdueOnly?: boolean
+}
+
+export interface QuoteLineDto {
+  id: string
+  productId: string
+  description: string
+  quantity: number
+  unitPrice: number
+  amount: number
+}
+
+export interface QuoteApprovalDto {
+  id: string
+  revisionId: string
+  requestedBy: string
+  requestedAt: string
+  decidedBy?: string
+  decidedAt?: string
+  decision: 'pending' | 'approved' | 'rejected'
+  reason?: string
+}
+
+export interface QuoteDispatchDto {
+  id: string
+  revisionId: string
+  sentAt: string
+  memo: string
+  language: QuoteLanguage
+  recordedBy: string
+  version: number
+}
+
+export interface QuoteRevisionDto {
+  id: string
+  quoteId: string
+  revisionNumber: number
+  revisionLabel: string
+  status: QuoteStatus
+  currency: Currency
+  tradeType: QuoteTradeType
+  taxType: QuoteTaxType
+  validUntil: string
+  incotermCode: string | null
+  namedPlace: string | null
+  discountAmount: number
+  shippingAmount: number
+  otherAmount: number
+  subtotalAmount: number
+  supplyAmount: number
+  taxAmount: number
+  totalAmount: number
+  lines: QuoteLineDto[]
+  approvals: QuoteApprovalDto[]
+  dispatches: QuoteDispatchDto[]
+  rejectionReason?: string
+  version: number
+}
+
+export interface QuoteDto {
+  id: string
+  quoteNumber: string
+  inquiryId?: string
+  customerId: string
+  customerName: string
+  ownerId: string
+  currentRevisionId: string
+  currentRevision: QuoteRevisionDto
+  revisions: QuoteRevisionDto[]
+  result?: QuoteResult
+  resultNote?: string
+  version: number
+}
+
+export interface QuoteLineInput {
+  productId: string
+  description: string
+  quantity: number
+  unitPrice: number
+}
+
+export interface QuoteCreateInput {
+  inquiryId?: string
+  customerId: string
+  ownerId: string
+  tradeType: QuoteTradeType
+  currency: Currency
+  taxType: QuoteTaxType
+  validUntil: string
+  incotermCode: string | null
+  namedPlace: string | null
+  discountAmount: number
+  shippingAmount: number
+  otherAmount: number
+  lines: QuoteLineInput[]
+}
+
+export interface QuoteRevisionInput extends Omit<QuoteCreateInput, 'inquiryId' | 'customerId' | 'ownerId'> {
+  expectedVersion: number
+}
+
+export interface QuoteQuery {
+  search?: string
+  ownerId?: string
+  customerId?: string
+  status?: QuoteStatus
+  currency?: Currency
+}
+
+export interface QuoteDashboardDto {
+  unansweredCount: number
+  overdueCount: number
+  approvalPendingCount: number
+  monthlyQuoteCount: number
+  currencyAmounts: Array<{ currency: Currency; amount: number }>
+  resultCounts: Record<QuoteResult, number>
+  winRatePercent: number
+}
+
+export interface IncotermDto {
+  id: string
+  code: string
+  displayName: string
+  status: ActiveStatus
+  sortOrder: number
+  version: number
+}

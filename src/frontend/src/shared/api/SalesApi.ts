@@ -5,12 +5,18 @@ import type {
   CompanyContact,
   CompanyRelationship,
   ContactInput,
+  CustomerInquiryDto,
+  CustomerInquiryInput,
   Customer,
   DailyRate,
   DashboardQuery,
   DashboardSummary,
   ImportRequest,
   ImportValidation,
+  IncotermDto,
+  InquiryActivityDto,
+  InquiryAttachmentDto,
+  InquiryQuery,
   LoginRequest,
   ListQuery,
   MonthlyRate,
@@ -20,6 +26,15 @@ import type {
   NetworkTreeNode,
   Price,
   Product,
+  QuoteCreateInput,
+  QuoteDashboardDto,
+  QuoteDispatchDto,
+  QuoteDto,
+  QuoteLanguage,
+  QuoteQuery,
+  QuoteResult,
+  QuoteRevisionDto,
+  QuoteRevisionInput,
   ProspectAssignmentInput,
   ProspectCandidate,
   ProspectCandidateQuery,
@@ -106,6 +121,30 @@ export interface SalesApi {
   listSalesTargets(yearMonth: string): Promise<SalesTarget[]>
   updateSalesTarget(input: SalesTarget): Promise<SalesTarget>
   getDashboardSummary(query: DashboardQuery): Promise<DashboardSummary>
+
+  getQuotationDashboard(): Promise<QuoteDashboardDto>
+  listInquiries(query?: InquiryQuery): Promise<CustomerInquiryDto[]>
+  getInquiry(id: string): Promise<CustomerInquiryDto>
+  saveInquiry(input: CustomerInquiryInput & { id?: string; expectedVersion?: number }): Promise<CustomerInquiryDto>
+  assignInquiry(id: string, ownerId: string, expectedVersion: number): Promise<CustomerInquiryDto>
+  changeInquiryStatus(id: string, status: CustomerInquiryDto['status'], resultMemo: string | undefined, expectedVersion: number): Promise<CustomerInquiryDto>
+  addInquiryActivity(id: string, kind: InquiryActivityDto['kind'], body: string): Promise<InquiryActivityDto>
+  uploadInquiryAttachment(id: string, file: File): Promise<InquiryAttachmentDto>
+  downloadInquiryAttachment(id: string, attachmentId: string): Promise<Blob>
+
+  listQuotes(query?: QuoteQuery): Promise<QuoteDto[]>
+  getQuote(id: string): Promise<QuoteDto>
+  createQuote(input: QuoteCreateInput): Promise<QuoteDto>
+  saveQuoteRevision(quoteId: string, revisionId: string, input: QuoteRevisionInput): Promise<QuoteRevisionDto>
+  submitQuoteRevision(quoteId: string, revisionId: string, expectedVersion: number): Promise<QuoteRevisionDto>
+  approveQuoteRevision(quoteId: string, revisionId: string, expectedVersion: number): Promise<QuoteRevisionDto>
+  rejectQuoteRevision(quoteId: string, revisionId: string, reason: string, expectedVersion: number): Promise<QuoteRevisionDto>
+  createQuoteRevision(quoteId: string, expectedVersion: number): Promise<QuoteRevisionDto>
+  downloadQuotePdf(quoteId: string, revisionId: string, language: QuoteLanguage): Promise<Blob>
+  recordQuoteDispatch(quoteId: string, revisionId: string, input: { sentAt: string; memo: string; language?: QuoteLanguage; expectedVersion: number }): Promise<QuoteDispatchDto>
+  recordQuoteResult(quoteId: string, revisionId: string, input: { result: QuoteResult; note: string; expectedVersion: number }): Promise<QuoteDto>
+  listIncoterms(): Promise<IncotermDto[]>
+  saveIncoterm(input: Omit<IncotermDto, 'id' | 'version'> & { id?: string; expectedVersion?: number }): Promise<IncotermDto>
 
   validateImport(input: ImportRequest): Promise<ImportValidation>
   commitImport(token: string): Promise<void>

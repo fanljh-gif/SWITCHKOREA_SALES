@@ -7,12 +7,19 @@ import type {
   CompanyContact,
   CompanyRelationship,
   ContactInput,
+  Currency,
+  CustomerInquiryDto,
+  CustomerInquiryInput,
   Customer,
   DailyRate,
   DashboardQuery,
   DashboardSummary,
   ImportRequest,
   ImportValidation,
+  IncotermDto,
+  InquiryActivityDto,
+  InquiryAttachmentDto,
+  InquiryQuery,
   LoginRequest,
   ListQuery,
   MonthlyRate,
@@ -22,6 +29,15 @@ import type {
   NetworkTreeNode,
   Price,
   Product,
+  QuoteCreateInput,
+  QuoteDashboardDto,
+  QuoteDispatchDto,
+  QuoteDto,
+  QuoteLanguage,
+  QuoteQuery,
+  QuoteResult,
+  QuoteRevisionDto,
+  QuoteRevisionInput,
   ProspectAssignmentInput,
   ProspectCandidate,
   ProspectCandidateQuery,
@@ -57,6 +73,9 @@ export class MockSalesApi implements SalesApi {
   private salesTargets: SalesTarget[]
   private auditLogs: AuditLog[]
   private importValidation: ImportValidation
+  private inquiries: CustomerInquiryDto[]
+  private quotes: QuoteDto[]
+  private incoterms: IncotermDto[]
 
   constructor(options: {
     currentUser?: User | null
@@ -151,6 +170,26 @@ export class MockSalesApi implements SalesApi {
       },
       { id: 'prospect-aster', companyName: 'Aster Control Labs', country: '미국', region: '미국', industry: '산업제어', companySize: '중소기업', domain: 'aster-controls.example', website: 'https://aster-controls.example', products: ['Control panel'], applications: ['Tact Switch'], ownerId: 'u4', status: 'onHold', discoveredBy: 'excel', runId: 'research-run-excel', score: score(66), evidence: [{ id: 'evidence-aster-1', candidateId: 'prospect-aster', title: 'Industrial controls', url: 'https://aster-controls.example/products', observedAt: '2026-10-06', summary: '산업제어 패널 소개', confidence: 'medium', sourceHash: 'sha256:aster-products' }], duplicateMatches: [], version: 1 },
       { id: 'prospect-vina', companyName: 'Vina Appliance Components', country: '베트남', region: '베트남', industry: '가전', companySize: '중견기업', domain: 'vina-appliance.example', website: 'https://vina-appliance.example', products: ['Appliance modules'], applications: ['Micro Switch'], ownerId: 'u3', status: 'approved', discoveredBy: 'excel', runId: 'research-run-excel', score: score(82), evidence: [{ id: 'evidence-vina-1', candidateId: 'prospect-vina', title: 'Appliance component catalog', url: 'https://vina-appliance.example/catalog', observedAt: '2026-10-06', summary: '가전 부품 카탈로그', confidence: 'high', sourceHash: 'sha256:vina-catalog' }], duplicateMatches: [], version: 1 },
+    ]
+    this.inquiries = [
+      { id: 'inquiry-1', inquiryNumber: 'INQ-202610-001', title: '양산 견적 요청', customerId: 'c1', customerName: '대한전자', contactName: '김현수', ownerId: 'u2', receivedAt: '2026-10-02', responseDueAt: '2026-10-07', status: 'responding', summary: '월 10,000개 기준 견적 요청', activities: [], attachments: [], linkedQuoteIds: ['quote-seed-1'], version: 1 },
+      { id: 'inquiry-2', inquiryNumber: 'INQ-202610-002', title: '수출 조건 문의', customerId: 'c2', customerName: '글로벌테크', contactName: 'Emily Carter', ownerId: 'u3', receivedAt: '2026-10-03', responseDueAt: '2026-10-10', status: 'quoting', summary: 'CIF 조건 견적 요청', activities: [], attachments: [], linkedQuoteIds: ['quote-seed-2'], version: 1 },
+      { id: 'inquiry-3', inquiryNumber: 'INQ-202610-003', title: '대체품 문의', customerId: 'c1', customerName: '대한전자', contactName: '박민준', ownerId: 'u2', receivedAt: '2026-10-04', responseDueAt: '2026-10-12', status: 'assigned', summary: '대체 모델 요청', activities: [], attachments: [], linkedQuoteIds: [], version: 1 },
+      { id: 'inquiry-4', inquiryNumber: 'INQ-202610-004', title: '신규 프로젝트 문의', customerId: 'c2', customerName: '글로벌테크', contactName: 'Alex Morgan', ownerId: 'u4', receivedAt: '2026-10-05', responseDueAt: '2026-10-15', status: 'received', summary: '신규 프로젝트 적용 문의', activities: [], attachments: [], linkedQuoteIds: [], version: 1 },
+    ]
+    const seedRevision = (id: string, quoteId: string, status: QuoteRevisionDto['status'], currency: QuoteRevisionDto['currency'], tradeType: QuoteRevisionDto['tradeType'], ownerLinePrice: number): QuoteRevisionDto => ({
+      id, quoteId, revisionNumber: 0, revisionLabel: 'Rev.0', status, currency, tradeType, taxType: tradeType === 'export' ? 'exempt' : 'exclusive', validUntil: '2026-10-31', incotermCode: tradeType === 'export' ? 'CIF' : null, namedPlace: tradeType === 'export' ? 'Port of Los Angeles' : null, discountAmount: 0, shippingAmount: 0, otherAmount: 0, subtotalAmount: ownerLinePrice * 100, supplyAmount: ownerLinePrice * 100, taxAmount: tradeType === 'export' ? 0 : ownerLinePrice * 10, totalAmount: tradeType === 'export' ? ownerLinePrice * 100 : ownerLinePrice * 110, lines: [{ id: `${id}-line-1`, productId: 'p1', description: '마이크로 스위치', quantity: 100, unitPrice: ownerLinePrice, amount: ownerLinePrice * 100 }], approvals: status === 'approvalRequested' ? [{ id: `${id}-approval-1`, revisionId: id, requestedBy: 'u2', requestedAt: '2026-10-07T10:00:00+09:00', decision: 'pending' }] : [], dispatches: [], version: 1,
+    })
+    const seedRevision1 = seedRevision('revision-seed-1', 'quote-seed-1', 'approvalRequested', 'KRW', 'domestic', 3_200)
+    const seedRevision2 = seedRevision('revision-seed-2', 'quote-seed-2', 'draft', 'USD', 'export', 2.5)
+    this.quotes = [
+      { id: 'quote-seed-1', quoteNumber: 'SWK-202610-001', inquiryId: 'inquiry-1', customerId: 'c1', customerName: '대한전자', ownerId: 'u2', currentRevisionId: seedRevision1.id, currentRevision: seedRevision1, revisions: [seedRevision1], version: 1 },
+      { id: 'quote-seed-2', quoteNumber: 'SWK-202610-002', inquiryId: 'inquiry-2', customerId: 'c2', customerName: '글로벌테크', ownerId: 'u3', currentRevisionId: seedRevision2.id, currentRevision: seedRevision2, revisions: [seedRevision2], version: 1 },
+    ]
+    this.incoterms = [
+      { id: 'incoterm-fob', code: 'FOB', displayName: 'Free On Board', status: 'active', sortOrder: 10, version: 1 },
+      { id: 'incoterm-cif', code: 'CIF', displayName: 'Cost, Insurance and Freight', status: 'active', sortOrder: 20, version: 1 },
+      { id: 'incoterm-dap', code: 'DAP', displayName: 'Delivered At Place', status: 'active', sortOrder: 30, version: 1 },
     ]
     this.prices = [
       { id: 'pr1', customerId: 'c1', productId: 'p1', currency: 'KRW', unitPrice: 3200, validFrom: '2026-10-01', version: 1 },
@@ -482,6 +521,291 @@ export class MockSalesApi implements SalesApi {
   async updateSalesTarget(input: SalesTarget): Promise<SalesTarget> { const index = this.salesTargets.findIndex((row) => row.yearMonth === input.yearMonth && row.userId === input.userId); if (index >= 0) this.salesTargets[index] = input; else this.salesTargets.push(input); return input }
   async getDashboardSummary(_query: DashboardQuery): Promise<DashboardSummary> {
     return this.dashboardSummary
+  }
+
+  private clone<T>(value: T): T { return structuredClone(value) }
+
+  private requireUser(): User {
+    if (!this.currentUser) throw new SalesApiError(401, '로그인이 필요합니다.')
+    return this.currentUser
+  }
+
+  private requireInquiry(id: string): CustomerInquiryDto {
+    const row = this.inquiries.find((item) => item.id === id)
+    if (!row) throw new SalesApiError(404, '고객문의를 찾을 수 없습니다.')
+    const user = this.requireUser()
+    if (user.role !== 'manager' && row.ownerId !== user.id) throw new SalesApiError(403, '다른 담당자의 고객문의는 조회할 수 없습니다.')
+    return row
+  }
+
+  private requireQuote(id: string): QuoteDto {
+    const row = this.quotes.find((item) => item.id === id)
+    if (!row) throw new SalesApiError(404, '견적을 찾을 수 없습니다.')
+    const user = this.requireUser()
+    if (user.role !== 'manager' && row.ownerId !== user.id) throw new SalesApiError(403, '다른 담당자의 견적은 조회할 수 없습니다.')
+    return row
+  }
+
+  private requireRevision(quote: QuoteDto, revisionId: string, expectedVersion?: number): QuoteRevisionDto {
+    const revision = quote.revisions.find((item) => item.id === revisionId)
+    if (!revision) throw new SalesApiError(404, '견적 개정본을 찾을 수 없습니다.')
+    if (expectedVersion !== undefined && revision.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 견적을 수정했습니다.')
+    return revision
+  }
+
+  private roundQuote(currency: Currency, amount: number) {
+    return currency === 'KRW' ? Math.round(amount) : Math.round(amount * 100) / 100
+  }
+
+  private quoteAmounts(input: Pick<QuoteCreateInput, 'currency' | 'taxType' | 'discountAmount' | 'shippingAmount' | 'otherAmount' | 'lines'>) {
+    if (!input.lines.length || input.lines.some((line) => line.quantity <= 0 || line.unitPrice < 0)) throw new SalesApiError(400, '견적 품목의 수량과 단가를 확인해 주세요.')
+    if ([input.discountAmount, input.shippingAmount, input.otherAmount].some((amount) => amount < 0)) throw new SalesApiError(400, '할인과 비용은 0 이상이어야 합니다.')
+    const subtotalAmount = this.roundQuote(input.currency, input.lines.reduce((sum, line) => sum + line.quantity * line.unitPrice, 0))
+    const base = this.roundQuote(input.currency, Math.max(0, subtotalAmount - input.discountAmount + input.shippingAmount + input.otherAmount))
+    if (input.taxType === 'exclusive') {
+      const taxAmount = this.roundQuote(input.currency, base * 0.1)
+      return { subtotalAmount, supplyAmount: base, taxAmount, totalAmount: this.roundQuote(input.currency, base + taxAmount) }
+    }
+    if (input.taxType === 'inclusive') {
+      const supplyAmount = this.roundQuote(input.currency, base / 1.1)
+      return { subtotalAmount, supplyAmount, taxAmount: this.roundQuote(input.currency, base - supplyAmount), totalAmount: base }
+    }
+    return { subtotalAmount, supplyAmount: base, taxAmount: 0, totalAmount: base }
+  }
+
+  private validateQuoteTerms(input: Pick<QuoteCreateInput, 'tradeType' | 'incotermCode' | 'namedPlace'>) {
+    if (input.tradeType === 'export' && (!input.incotermCode?.trim() || !input.namedPlace?.trim())) throw new SalesApiError(400, '수출 견적은 Incoterms와 지정 장소가 필요합니다.')
+    if (input.tradeType === 'domestic' && (input.incotermCode || input.namedPlace)) throw new SalesApiError(400, '국내 견적에는 Incoterms를 입력할 수 없습니다.')
+  }
+
+  private touchQuote(quote: QuoteDto, revision: QuoteRevisionDto) {
+    revision.version += 1
+    quote.version += 1
+    quote.currentRevisionId = revision.id
+    quote.currentRevision = revision
+  }
+
+  async getQuotationDashboard(): Promise<QuoteDashboardDto> {
+    const inquiries = await this.listInquiries()
+    const quotes = await this.listQuotes()
+    const results = { won: 0, lost: 0, onHold: 0 }
+    quotes.forEach((quote) => { if (quote.result) results[quote.result] += 1 })
+    const decided = results.won + results.lost
+    return {
+      unansweredCount: inquiries.filter((row) => !['answered', 'closed'].includes(row.status)).length,
+      overdueCount: inquiries.filter((row) => !['answered', 'closed'].includes(row.status) && row.responseDueAt < '2026-10-08').length,
+      approvalPendingCount: quotes.filter((row) => row.currentRevision.status === 'approvalRequested').length,
+      monthlyQuoteCount: quotes.filter((row) => row.quoteNumber.startsWith('SWK-202610-')).length,
+      currencyAmounts: (['KRW', 'USD', 'CNY'] as Currency[]).map((currency) => ({ currency, amount: this.roundQuote(currency, quotes.filter((row) => row.currentRevision.currency === currency).reduce((sum, row) => sum + row.currentRevision.totalAmount, 0)) })),
+      resultCounts: results,
+      winRatePercent: decided ? Math.round((results.won / decided) * 1000) / 10 : 0,
+    }
+  }
+
+  async listInquiries(query?: InquiryQuery): Promise<CustomerInquiryDto[]> {
+    const user = this.requireUser()
+    return this.inquiries.filter((row) => {
+      if (user.role !== 'manager' && row.ownerId !== user.id) return false
+      if (query?.ownerId && row.ownerId !== query.ownerId) return false
+      if (query?.customerId && row.customerId !== query.customerId) return false
+      if (query?.status && row.status !== query.status) return false
+      if (query?.overdueOnly && (['answered', 'closed'].includes(row.status) || row.responseDueAt >= '2026-10-08')) return false
+      return !query?.search || `${row.inquiryNumber} ${row.title} ${row.customerName}`.toLowerCase().includes(query.search.toLowerCase())
+    }).map((row) => this.clone(row))
+  }
+
+  async getInquiry(id: string): Promise<CustomerInquiryDto> { return this.clone(this.requireInquiry(id)) }
+
+  async saveInquiry(input: CustomerInquiryInput & { id?: string; expectedVersion?: number }): Promise<CustomerInquiryDto> {
+    const user = this.requireUser()
+    if (input.id) {
+      const row = this.requireInquiry(input.id)
+      if (row.version !== input.expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 고객문의를 수정했습니다.')
+      const customer = this.customers.find((item) => item.id === input.customerId)
+      if (!customer) throw new SalesApiError(400, '거래처를 확인해 주세요.')
+      Object.assign(row, input, { customerName: customer.companyName, ownerId: user.role === 'member' ? user.id : input.ownerId, version: row.version + 1 })
+      return this.clone(row)
+    }
+    const customer = this.customers.find((item) => item.id === input.customerId)
+    if (!customer) throw new SalesApiError(400, '거래처를 확인해 주세요.')
+    const sequence = String(this.inquiries.length + 1).padStart(3, '0')
+    const row: CustomerInquiryDto = { ...input, id: crypto.randomUUID(), inquiryNumber: `INQ-202610-${sequence}`, customerName: customer.companyName, ownerId: user.role === 'member' ? user.id : input.ownerId, status: 'received', activities: [], attachments: [], linkedQuoteIds: [], version: 1 }
+    this.inquiries.push(row)
+    return this.clone(row)
+  }
+
+  async assignInquiry(id: string, ownerId: string, expectedVersion: number): Promise<CustomerInquiryDto> {
+    if (this.requireUser().role !== 'manager') throw new SalesApiError(403, '팀장만 문의 담당자를 변경할 수 있습니다.')
+    const row = this.requireInquiry(id)
+    if (row.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 고객문의를 수정했습니다.')
+    row.ownerId = ownerId; row.status = 'assigned'; row.version += 1
+    return this.clone(row)
+  }
+
+  async changeInquiryStatus(id: string, status: CustomerInquiryDto['status'], resultMemo: string | undefined, expectedVersion: number): Promise<CustomerInquiryDto> {
+    const row = this.requireInquiry(id)
+    if (row.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 고객문의를 수정했습니다.')
+    if (status === 'closed' && !resultMemo?.trim()) throw new SalesApiError(400, '문의 종료 메모가 필요합니다.')
+    if (row.status === 'closed' && status !== 'closed' && this.requireUser().role !== 'manager') throw new SalesApiError(403, '종료된 문의는 팀장만 다시 열 수 있습니다.')
+    row.status = status; row.resultMemo = resultMemo; row.version += 1
+    return this.clone(row)
+  }
+
+  async addInquiryActivity(id: string, kind: InquiryActivityDto['kind'], body: string): Promise<InquiryActivityDto> {
+    const row = this.requireInquiry(id)
+    if (!body.trim()) throw new SalesApiError(400, '활동 내용을 입력해 주세요.')
+    const activity: InquiryActivityDto = { id: crypto.randomUUID(), inquiryId: id, kind, body, actorId: this.requireUser().id, occurredAt: new Date().toISOString() }
+    row.activities.push(activity); row.version += 1
+    return this.clone(activity)
+  }
+
+  async uploadInquiryAttachment(id: string, file: File): Promise<InquiryAttachmentDto> {
+    const row = this.requireInquiry(id)
+    const extension = file.name.split('.').pop()?.toLowerCase()
+    if (!extension || !['pdf', 'xls', 'xlsx', 'doc', 'docx', 'png', 'jpg', 'jpeg'].includes(extension) || file.size > 10 * 1024 * 1024) throw new SalesApiError(400, '허용된 10MB 이하 파일만 첨부할 수 있습니다.')
+    const attachment: InquiryAttachmentDto = { id: crypto.randomUUID(), inquiryId: id, fileName: file.name, contentType: file.type, size: file.size, uploadedBy: this.requireUser().id, uploadedAt: new Date().toISOString() }
+    row.attachments.push(attachment); row.version += 1
+    return this.clone(attachment)
+  }
+
+  async downloadInquiryAttachment(id: string, attachmentId: string): Promise<Blob> {
+    const row = this.requireInquiry(id)
+    if (!row.attachments.some((item) => item.id === attachmentId)) throw new SalesApiError(404, '첨부파일을 찾을 수 없습니다.')
+    return new Blob(['mock attachment'], { type: 'application/octet-stream' })
+  }
+
+  async listQuotes(query?: QuoteQuery): Promise<QuoteDto[]> {
+    const user = this.requireUser()
+    return this.quotes.filter((row) => {
+      if (user.role !== 'manager' && row.ownerId !== user.id) return false
+      if (query?.ownerId && row.ownerId !== query.ownerId) return false
+      if (query?.customerId && row.customerId !== query.customerId) return false
+      if (query?.status && row.currentRevision.status !== query.status) return false
+      if (query?.currency && row.currentRevision.currency !== query.currency) return false
+      return !query?.search || `${row.quoteNumber} ${row.customerName}`.toLowerCase().includes(query.search.toLowerCase())
+    }).map((row) => this.clone(row))
+  }
+
+  async getQuote(id: string): Promise<QuoteDto> { return this.clone(this.requireQuote(id)) }
+
+  async createQuote(input: QuoteCreateInput): Promise<QuoteDto> {
+    const user = this.requireUser()
+    if (user.role === 'member' && input.ownerId !== user.id) throw new SalesApiError(403, '본인 담당 견적만 작성할 수 있습니다.')
+    const customer = this.customers.find((item) => item.id === input.customerId)
+    if (!customer) throw new SalesApiError(400, '거래처를 확인해 주세요.')
+    this.validateQuoteTerms(input)
+    const amounts = this.quoteAmounts(input)
+    const quoteId = crypto.randomUUID()
+    const revisionId = crypto.randomUUID()
+    const revision: QuoteRevisionDto = { id: revisionId, quoteId, revisionNumber: 0, revisionLabel: 'Rev.0', status: 'draft', currency: input.currency, tradeType: input.tradeType, taxType: input.taxType, validUntil: input.validUntil, incotermCode: input.tradeType === 'export' ? input.incotermCode : null, namedPlace: input.tradeType === 'export' ? input.namedPlace : null, discountAmount: input.discountAmount, shippingAmount: input.shippingAmount, otherAmount: input.otherAmount, ...amounts, lines: input.lines.map((line) => ({ ...line, id: crypto.randomUUID(), amount: this.roundQuote(input.currency, line.quantity * line.unitPrice) })), approvals: [], dispatches: [], version: 1 }
+    const quote: QuoteDto = { id: quoteId, quoteNumber: `SWK-202610-${String(this.quotes.length + 1).padStart(3, '0')}`, inquiryId: input.inquiryId, customerId: input.customerId, customerName: customer.companyName, ownerId: input.ownerId, currentRevisionId: revisionId, currentRevision: revision, revisions: [revision], version: 1 }
+    this.quotes.push(quote)
+    if (input.inquiryId) {
+      const inquiry = this.inquiries.find((item) => item.id === input.inquiryId)
+      if (inquiry && (user.role === 'manager' || inquiry.ownerId === user.id)) { inquiry.linkedQuoteIds.push(quote.id); inquiry.status = 'quoting'; inquiry.version += 1 }
+    }
+    return this.clone(quote)
+  }
+
+  async saveQuoteRevision(quoteId: string, revisionId: string, input: QuoteRevisionInput): Promise<QuoteRevisionDto> {
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId, input.expectedVersion)
+    if (!['draft', 'rejected'].includes(revision.status)) throw new SalesApiError(422, '작성 중 또는 반려된 개정본만 수정할 수 있습니다.')
+    this.validateQuoteTerms(input)
+    const amounts = this.quoteAmounts(input)
+    Object.assign(revision, input, amounts, { incotermCode: input.tradeType === 'export' ? input.incotermCode : null, namedPlace: input.tradeType === 'export' ? input.namedPlace : null, lines: input.lines.map((line) => ({ ...line, id: crypto.randomUUID(), amount: this.roundQuote(input.currency, line.quantity * line.unitPrice) })) })
+    this.touchQuote(quote, revision)
+    return this.clone(revision)
+  }
+
+  async submitQuoteRevision(quoteId: string, revisionId: string, expectedVersion: number): Promise<QuoteRevisionDto> {
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId, expectedVersion)
+    if (!['draft', 'rejected'].includes(revision.status)) throw new SalesApiError(422, '작성 중 또는 반려된 개정본만 승인 요청할 수 있습니다.')
+    this.validateQuoteTerms(revision)
+    revision.status = 'approvalRequested'; revision.rejectionReason = undefined
+    revision.approvals.push({ id: crypto.randomUUID(), revisionId, requestedBy: this.requireUser().id, requestedAt: new Date().toISOString(), decision: 'pending' })
+    this.touchQuote(quote, revision)
+    return this.clone(revision)
+  }
+
+  async approveQuoteRevision(quoteId: string, revisionId: string, expectedVersion: number): Promise<QuoteRevisionDto> {
+    if (this.requireUser().role !== 'manager') throw new SalesApiError(403, '팀장만 견적을 승인할 수 있습니다.')
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId, expectedVersion)
+    if (revision.status !== 'approvalRequested') throw new SalesApiError(422, '승인 요청 상태의 견적만 승인할 수 있습니다.')
+    revision.status = 'approved'
+    const approval = [...revision.approvals].reverse().find((item) => item.decision === 'pending')
+    if (approval) Object.assign(approval, { decision: 'approved', decidedBy: this.requireUser().id, decidedAt: new Date().toISOString() })
+    this.touchQuote(quote, revision)
+    return this.clone(revision)
+  }
+
+  async rejectQuoteRevision(quoteId: string, revisionId: string, reason: string, expectedVersion: number): Promise<QuoteRevisionDto> {
+    if (this.requireUser().role !== 'manager') throw new SalesApiError(403, '팀장만 견적을 반려할 수 있습니다.')
+    if (!reason.trim()) throw new SalesApiError(400, '반려 사유를 입력해 주세요.')
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId, expectedVersion)
+    if (revision.status !== 'approvalRequested') throw new SalesApiError(422, '승인 요청 상태의 견적만 반려할 수 있습니다.')
+    revision.status = 'rejected'; revision.rejectionReason = reason
+    const approval = [...revision.approvals].reverse().find((item) => item.decision === 'pending')
+    if (approval) Object.assign(approval, { decision: 'rejected', reason, decidedBy: this.requireUser().id, decidedAt: new Date().toISOString() })
+    this.touchQuote(quote, revision)
+    return this.clone(revision)
+  }
+
+  async createQuoteRevision(quoteId: string, expectedVersion: number): Promise<QuoteRevisionDto> {
+    const quote = this.requireQuote(quoteId)
+    if (quote.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 견적을 수정했습니다.')
+    const source = quote.currentRevision
+    if (!['approved', 'sent', 'won', 'lost', 'onHold'].includes(source.status)) throw new SalesApiError(422, '승인된 견적에서만 새 개정본을 만들 수 있습니다.')
+    const next: QuoteRevisionDto = { ...this.clone(source), id: crypto.randomUUID(), revisionNumber: source.revisionNumber + 1, revisionLabel: `Rev.${source.revisionNumber + 1}`, status: 'draft', approvals: [], dispatches: [], rejectionReason: undefined, version: 1, lines: source.lines.map((line) => ({ ...line, id: crypto.randomUUID() })) }
+    quote.revisions.push(next); quote.currentRevisionId = next.id; quote.currentRevision = next; quote.version += 1
+    return this.clone(next)
+  }
+
+  async downloadQuotePdf(quoteId: string, revisionId: string, language: QuoteLanguage): Promise<Blob> {
+    const revision = this.requireRevision(this.requireQuote(quoteId), revisionId)
+    if (!['approved', 'sent', 'won', 'lost', 'onHold'].includes(revision.status)) throw new SalesApiError(422, '승인된 견적만 PDF를 생성할 수 있습니다.')
+    return new Blob([`${language}:${quoteId}:${revision.revisionLabel}`], { type: 'application/pdf' })
+  }
+
+  async recordQuoteDispatch(quoteId: string, revisionId: string, input: { sentAt: string; memo: string; language?: QuoteLanguage; expectedVersion: number }): Promise<QuoteDispatchDto> {
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId, input.expectedVersion)
+    if (revision.status !== 'approved') throw new SalesApiError(422, '승인된 견적만 발송 처리할 수 있습니다.')
+    if (!input.sentAt || !input.memo.trim()) throw new SalesApiError(400, '발송일시와 메모가 필요합니다.')
+    revision.status = 'sent'
+    this.touchQuote(quote, revision)
+    const dispatch: QuoteDispatchDto = { id: crypto.randomUUID(), revisionId, sentAt: input.sentAt, memo: input.memo, language: input.language ?? 'ko', recordedBy: this.requireUser().id, version: revision.version }
+    revision.dispatches.push(dispatch)
+    return this.clone(dispatch)
+  }
+
+  async recordQuoteResult(quoteId: string, revisionId: string, input: { result: QuoteResult; note: string; expectedVersion: number }): Promise<QuoteDto> {
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId, input.expectedVersion)
+    if (revision.status !== 'sent') throw new SalesApiError(422, '발송 완료 견적만 결과를 등록할 수 있습니다.')
+    if (!input.note.trim()) throw new SalesApiError(400, '결과 메모가 필요합니다.')
+    revision.status = input.result; quote.result = input.result; quote.resultNote = input.note
+    this.touchQuote(quote, revision)
+    return this.clone(quote)
+  }
+
+  async listIncoterms(): Promise<IncotermDto[]> { return this.incoterms.slice().sort((a, b) => a.sortOrder - b.sortOrder).map((row) => ({ ...row })) }
+
+  async saveIncoterm(input: Omit<IncotermDto, 'id' | 'version'> & { id?: string; expectedVersion?: number }): Promise<IncotermDto> {
+    if (this.requireUser().role !== 'manager') throw new SalesApiError(403, '팀장만 Incoterms를 관리할 수 있습니다.')
+    if (input.id) {
+      const row = this.incoterms.find((item) => item.id === input.id)
+      if (!row) throw new SalesApiError(404, 'Incoterms를 찾을 수 없습니다.')
+      if (row.version !== input.expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 Incoterms를 수정했습니다.')
+      Object.assign(row, input, { version: row.version + 1 })
+      return { ...row }
+    }
+    const row: IncotermDto = { ...input, id: crypto.randomUUID(), version: 1 }
+    this.incoterms.push(row)
+    return { ...row }
   }
 
   async validateImport(_input: ImportRequest): Promise<ImportValidation> { return this.importValidation }
