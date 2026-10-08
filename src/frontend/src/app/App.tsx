@@ -13,6 +13,7 @@ import { SettingsPage } from '../features/settings/SettingsPage'
 import { ShipmentPage } from '../features/shipments/ShipmentPage'
 import { NetworkPage } from '../features/network/NetworkPage'
 import { ResearchPage } from '../features/research/ResearchPage'
+import { QuotationInquiryPage } from '../features/quotes/QuotationInquiryPage'
 import { AuthSessionProvider, useAuth } from './AuthSession'
 
 const SalesApiContext = createContext<SalesApi | null>(null)
@@ -32,6 +33,7 @@ const navigation = [
   { path: '/customers', label: '거래처 관리', managerOnly: false },
   { path: '/catalog', label: '품목·단가 관리', managerOnly: false },
   { path: '/shipments', label: '출고·매출 관리', managerOnly: false },
+  { path: '/quotes', label: '견적·고객문의', managerOnly: false },
   { path: '/settings', label: '환율·목표 관리', managerOnly: true },
   { path: '/network', label: '영업망 관리', managerOnly: false },
   { path: '/research', label: '잠재고객 리서치', managerOnly: false },
@@ -63,6 +65,7 @@ function AppShell() {
                 <Route path="/research" element={<ResearchPage />} />
                 <Route path="/catalog" element={<ProductPage />} />
                 <Route path="/shipments" element={<ShipmentPage />} />
+                <Route path="/quotes" element={<QuotationInquiryPage />} />
                 <Route path="/imports" element={<ImportWizard />} />
                 <Route path="/settings" element={<SettingsPage />} />
                 <Route path="/admin" element={<AdminPage />} />
