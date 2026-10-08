@@ -25,6 +25,9 @@ public static class PostgresServiceExtensions
         services.AddScoped<IProspectConversionRepository, ProspectConversionRepository>();
         services.AddScoped<IResearchTargetProfileRepository, ResearchTargetProfileRepository>();
         services.AddScoped<IResearchRunRepository, ResearchRunRepository>();
+        services.AddScoped<IInquiryRepository, InquiryRepository>();
+        services.AddScoped<IQuoteRepository, QuoteRepository>();
+        services.AddScoped<IIncotermRepository, IncotermRepository>();
         return services;
     }
 }

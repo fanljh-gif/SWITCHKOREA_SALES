@@ -30,6 +30,16 @@ public sealed class SalesDbContext(DbContextOptions<SalesDbContext> options) : D
     public DbSet<ProspectDuplicateMatch> ProspectDuplicateMatches => Set<ProspectDuplicateMatch>();
     public DbSet<ProspectActivity> ProspectActivities => Set<ProspectActivity>();
     public DbSet<ProspectConversion> ProspectConversions => Set<ProspectConversion>();
+    public DbSet<CustomerInquiry> CustomerInquiries => Set<CustomerInquiry>();
+    public DbSet<InquiryActivity> InquiryActivities => Set<InquiryActivity>();
+    public DbSet<InquiryAttachment> InquiryAttachments => Set<InquiryAttachment>();
+    public DbSet<Quote> Quotes => Set<Quote>();
+    public DbSet<QuoteRevision> QuoteRevisions => Set<QuoteRevision>();
+    public DbSet<QuoteLine> QuoteLines => Set<QuoteLine>();
+    public DbSet<QuoteApproval> QuoteApprovals => Set<QuoteApproval>();
+    public DbSet<QuoteDispatch> QuoteDispatches => Set<QuoteDispatch>();
+    public DbSet<Incoterm> Incoterms => Set<Incoterm>();
+    public DbSet<QuoteNumberSequence> QuoteNumberSequences => Set<QuoteNumberSequence>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder) => modelBuilder.ApplyConfigurationsFromAssembly(typeof(SalesDbContext).Assembly);
 
