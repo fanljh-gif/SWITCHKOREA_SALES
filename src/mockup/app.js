@@ -2,7 +2,8 @@
   "use strict";
 
   const data = window.SALES_MOCK_DATA;
-  const state = { role: "manager", currentUserId: "u1", view: "dashboard", importStep: 1, networkRootId: "nc-samsung", selectedNetworkCompanyId: "nc-a", networkTab: "basic", networkCollapsedIds: [], networkCompanyMode: "create", selectedResearchCandidateId: "pc1", researchStatus: "all", researchRegion: "all", researchOwner: "all", researchSearch: "", dialogType: null };
+  const quotationData = window.quotationMockData;
+  const state = { role: "manager", currentUserId: "u1", view: "dashboard", importStep: 1, networkRootId: "nc-samsung", selectedNetworkCompanyId: "nc-a", networkTab: "basic", networkCollapsedIds: [], networkCompanyMode: "create", selectedResearchCandidateId: "pc1", researchStatus: "all", researchRegion: "all", researchOwner: "all", researchSearch: "", quoteTab: "overview", selectedInquiryId: "qi1", selectedQuotationId: "q1", inquirySearch: "", inquiryStatus: "all", inquiryOwner: "all", quotationSearch: "", quotationStatus: "all", quotationCurrency: "all", dialogType: null };
   const $ = (selector, root = document) => root.querySelector(selector);
   const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
   const won = new Intl.NumberFormat("ko-KR", { style: "currency", currency: "KRW", maximumFractionDigits: 0 });
@@ -42,6 +43,7 @@
     renderNetworkCompanyDetail();
     renderResearchCandidates();
     renderResearchCandidateDetail();
+    renderQuoteModule();
   }
 
   function showView(name) {
@@ -326,6 +328,134 @@
     $("#research-import-panel").classList.toggle("is-hidden", !open);
   }
 
+  const inquiryStatusLabels = quotationData.inquiryStatuses;
+  const quotationStatusLabels = quotationData.quotationStatuses;
+
+  function quoteAmount(currency, value) {
+    return formatAmount(currency, Math.round(value * 100) / 100);
+  }
+
+  function calculateQuoteTotals(quotation) {
+    const subtotal = quotation.lines.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    const base = Math.max(0, subtotal - quotation.discount + quotation.shipping + quotation.otherCost);
+    const tax = quotation.taxType === "exclusive" ? base * 0.1 : quotation.taxType === "inclusive" ? base - (base / 1.1) : 0;
+    return { subtotal, tax, total: quotation.taxType === "exclusive" ? base + tax : base };
+  }
+
+  function visibleQuoteRecords(records) {
+    return state.role === "manager" ? records : records.filter((item) => item.ownerId === state.currentUserId);
+  }
+
+  function isInquiryOverdue(item) {
+    return !["answered", "closed"].includes(item.status) && item.dueAt < quotationData.asOf;
+  }
+
+  function quoteStatusBadge(status, labels) {
+    return `<span class="badge quote-status ${status}">${labels[status] || status}</span>`;
+  }
+
+  function selectQuoteTab(tab) {
+    state.quoteTab = ["overview", "inquiries", "quotations"].includes(tab) ? tab : "overview";
+    $$('[data-quote-tab]').forEach((button) => button.classList.toggle("active", button.dataset.quoteTab === state.quoteTab));
+    $$('[data-quote-panel]').forEach((panel) => panel.classList.toggle("active", panel.dataset.quotePanel === state.quoteTab));
+    if (state.quoteTab === "inquiries") renderInquiryList();
+    if (state.quoteTab === "quotations") renderQuotationList();
+  }
+
+  function renderQuoteOverview() {
+    const inquiries = visibleQuoteRecords(quotationData.inquiries);
+    const quotations = visibleQuoteRecords(quotationData.quotations);
+    const results = ["won", "lost", "onHold"].map((status) => quotations.filter((item) => item.status === status).length);
+    const completed = results[0] + results[1];
+    $("#quote-kpi-unanswered").textContent = inquiries.filter((item) => !["answered", "closed"].includes(item.status)).length;
+    $("#quote-kpi-overdue").textContent = inquiries.filter(isInquiryOverdue).length;
+    $("#quote-kpi-approval").textContent = quotations.filter((item) => item.status === "approvalRequested").length;
+    $("#quote-kpi-month").textContent = `${quotations.length}건`;
+    $("#quote-kpi-currencies").textContent = ["KRW", "USD", "CNY"].map((currency) => `${currency} ${quoteAmount(currency, quotations.filter((item) => item.currency === currency).reduce((sum, item) => sum + calculateQuoteTotals(item).total, 0))}`).join(" · ");
+    $("#quote-kpi-results").textContent = results.join(" · ");
+    $("#quote-kpi-win-rate").textContent = completed ? `${Math.round((results[0] / completed) * 100)}%` : "0%";
+    $("#quote-priority-inquiries").innerHTML = inquiries.filter((item) => isInquiryOverdue(item) || !["answered", "closed"].includes(item.status)).sort((a, b) => a.dueAt.localeCompare(b.dueAt)).slice(0, 4).map((item) => `<tr data-quote-action="select-inquiry" data-inquiry-id="${item.id}"><td><strong>${item.number}</strong><small>${item.title}</small></td><td>${item.customer}</td><td>${item.owner}</td><td class="${isInquiryOverdue(item) ? "quote-overdue" : ""}">${item.dueAt}</td><td>${quoteStatusBadge(item.status, inquiryStatusLabels)}</td></tr>`).join("");
+    $("#quote-pending-approvals").innerHTML = quotations.filter((item) => item.status === "approvalRequested").map((item) => `<tr data-quote-action="select-quotation" data-quotation-id="${item.id}"><td><strong>${item.number}</strong><small>${item.revision}</small></td><td>${item.customer}</td><td>${item.owner}</td><td class="right">${quoteAmount(item.currency, calculateQuoteTotals(item).total)}</td><td>${quoteStatusBadge(item.status, quotationStatusLabels)}</td></tr>`).join("") || `<tr><td colspan="5" class="quote-empty">승인 대기 견적이 없습니다.</td></tr>`;
+  }
+
+  function filteredInquiries() {
+    const query = state.inquirySearch.toLowerCase();
+    return visibleQuoteRecords(quotationData.inquiries).filter((item) => (state.inquiryStatus === "all" || item.status === state.inquiryStatus) && (state.inquiryOwner === "all" || item.ownerId === state.inquiryOwner) && (!query || `${item.number} ${item.title} ${item.customer}`.toLowerCase().includes(query)));
+  }
+
+  function renderInquiryList() {
+    const rows = filteredInquiries();
+    if (!rows.some((item) => item.id === state.selectedInquiryId)) state.selectedInquiryId = rows[0]?.id || null;
+    $("#quote-inquiry-table").innerHTML = rows.map((item) => `<tr class="${item.id === state.selectedInquiryId ? "selected" : ""}" data-quote-action="select-inquiry" data-inquiry-id="${item.id}"><td><div class="subcell"><strong>${item.number}</strong><small>${item.title}</small></div></td><td>${item.customer}</td><td>${item.owner}</td><td class="${isInquiryOverdue(item) ? "quote-overdue" : ""}">${item.dueAt}${isInquiryOverdue(item) ? " · 초과" : ""}</td><td>${quoteStatusBadge(item.status, inquiryStatusLabels)}</td></tr>`).join("") || `<tr><td colspan="5" class="quote-empty">조건에 맞는 문의가 없습니다.</td></tr>`;
+    renderInquiryDetail();
+  }
+
+  function renderInquiryDetail() {
+    const item = quotationData.inquiries.find((inquiry) => inquiry.id === state.selectedInquiryId);
+    if (!item) { $("#quote-detail").innerHTML = `<div class="quote-empty">문의를 선택하세요.</div>`; return; }
+    const related = quotationData.quotations.filter((quotation) => quotation.inquiryId === item.id);
+    const canEdit = state.role === "manager" || item.ownerId === state.currentUserId;
+    $("#quote-detail").innerHTML = `<div class="quote-detail-head"><div><small>${item.number}</small><h3>${item.title}</h3><p>${item.customer} · ${item.contact}</p></div>${quoteStatusBadge(item.status, inquiryStatusLabels)}</div><dl class="quote-meta"><div><dt>담당자</dt><dd>${item.owner}</dd></div><div><dt>접수 채널</dt><dd>${item.channel}</dd></div><div><dt>접수일</dt><dd>${item.receivedAt}</dd></div><div><dt>답변기한</dt><dd class="${isInquiryOverdue(item) ? "quote-overdue" : ""}">${item.dueAt}</dd></div></dl><section class="quote-note"><span>문의 내용</span><p>${item.summary}</p></section><section class="quote-detail-section"><div><h4>첨부파일</h4><span>${item.attachments.length}개</span></div>${item.attachments.length ? item.attachments.map((file) => `<button class="quote-file">▤ ${file}</button>`).join("") : `<p class="muted">첨부파일 없음</p>`}</section><section class="quote-detail-section"><div><h4>활동 이력</h4><button class="text-button" data-quote-action="add-activity" ${canEdit ? "" : "disabled"}>+ 활동 추가</button></div><ol class="quote-timeline">${item.activities.map((activity) => `<li>${activity}</li>`).join("")}</ol></section><section class="quote-detail-section"><div><h4>연결 견적</h4><button class="text-button" data-quote-action="create-quote" ${canEdit ? "" : "disabled"}>+ 견적 작성</button></div>${related.map((quotation) => `<button class="quote-related" data-quote-action="select-quotation" data-quotation-id="${quotation.id}"><strong>${quotation.number} · ${quotation.revision}</strong><span>${quotationStatusLabels[quotation.status]}</span></button>`).join("") || `<p class="muted">연결된 견적이 없습니다.</p>`}</section>`;
+  }
+
+  function filteredQuotations() {
+    const query = state.quotationSearch.toLowerCase();
+    return visibleQuoteRecords(quotationData.quotations).filter((item) => (state.quotationStatus === "all" || item.status === state.quotationStatus) && (state.quotationCurrency === "all" || item.currency === state.quotationCurrency) && (!query || `${item.number} ${item.customer}`.toLowerCase().includes(query)));
+  }
+
+  function renderQuotationList() {
+    const rows = filteredQuotations();
+    if (!rows.some((item) => item.id === state.selectedQuotationId)) state.selectedQuotationId = rows[0]?.id || null;
+    $("#quotation-table").innerHTML = rows.map((item) => `<tr class="${item.id === state.selectedQuotationId ? "selected" : ""}" data-quote-action="select-quotation" data-quotation-id="${item.id}"><td><div class="subcell"><strong>${item.number}</strong><small>${item.revision} · ${item.validUntil}까지</small></div></td><td>${item.customer}</td><td>${item.tradeType === "export" ? "수출" : "국내"}</td><td>${item.owner}</td><td class="right"><strong>${quoteAmount(item.currency, calculateQuoteTotals(item).total)}</strong></td><td>${quoteStatusBadge(item.status, quotationStatusLabels)}</td></tr>`).join("") || `<tr><td colspan="6" class="quote-empty">조건에 맞는 견적이 없습니다.</td></tr>`;
+    renderQuotationDetail();
+  }
+
+  function renderQuotationDetail() {
+    const item = quotationData.quotations.find((quotation) => quotation.id === state.selectedQuotationId);
+    if (!item) { $("#quotation-detail").innerHTML = `<div class="quote-empty">견적을 선택하세요.</div>`; return; }
+    const totals = calculateQuoteTotals(item);
+    const canEdit = (state.role === "manager" || item.ownerId === state.currentUserId) && ["draft", "rejected"].includes(item.status);
+    const managerDecision = state.role === "manager" && item.status === "approvalRequested";
+    const canPublish = item.status === "approved";
+    const canResult = item.status === "dispatched";
+    $("#quotation-detail").innerHTML = `<div class="quote-detail-head"><div><small>${item.number}</small><h3>${item.customer} <em>${item.revision}</em></h3><p>${item.owner} · 유효기간 ${item.validUntil}</p></div>${quoteStatusBadge(item.status, quotationStatusLabels)}</div><div class="quote-term-strip"><span>${item.tradeType === "export" ? "수출" : "국내"}</span><strong>${item.tradeType === "export" ? `Incoterms ${item.incoterm} · ${item.namedPlace}` : "국내 거래 · Incoterms 미적용"}</strong><b>${item.currency}</b></div><div class="quote-lines"><div class="quote-line quote-line-head"><span>품목</span><span>수량</span><span>단가</span><span>금액</span></div>${item.lines.map((line) => `<div class="quote-line"><strong>${line.product}</strong><span>${number.format(line.quantity)}</span><span>${quoteAmount(item.currency, line.unitPrice)}</span><b>${quoteAmount(item.currency, line.quantity * line.unitPrice)}</b></div>`).join("")}</div><button class="text-button" data-quote-action="add-line" ${canEdit ? "" : "disabled"}>+ 품목 추가</button><dl class="quote-totals"><div><dt>소계</dt><dd>${quoteAmount(item.currency, totals.subtotal)}</dd></div><div><dt>할인</dt><dd>-${quoteAmount(item.currency, item.discount)}</dd></div><div><dt>운송비 / 기타</dt><dd>${quoteAmount(item.currency, item.shipping + item.otherCost)}</dd></div><div><dt>세금 (${item.taxType === "exclusive" ? "별도" : item.taxType === "inclusive" ? "포함" : "면세"})</dt><dd>${quoteAmount(item.currency, totals.tax)}</dd></div><div class="total"><dt>최종 합계</dt><dd>${quoteAmount(item.currency, totals.total)}</dd></div></dl>${item.rejectionReason ? `<p class="quote-rejection"><strong>반려 사유</strong>${item.rejectionReason}</p>` : ""}<section class="quote-revisions"><h4>개정 이력</h4>${item.revisions.map((revision) => `<div><strong>${revision.revision}</strong><span>${quotationStatusLabels[revision.status]}</span><small>${revision.note}</small></div>`).join("")}</section><div class="quote-action-grid"><button class="button secondary" data-quote-action="request-approval" ${canEdit ? "" : "disabled"}>승인 요청</button><button class="button primary" data-quote-action="approve" ${managerDecision ? "" : "disabled"}>승인</button><button class="button danger-button" data-quote-action="reject" ${managerDecision ? "" : "disabled"}>반려</button><button class="button secondary" data-quote-action="download-pdf-ko" ${canPublish ? "" : "disabled"}>국문 PDF</button><button class="button secondary" data-quote-action="download-pdf-en" ${canPublish ? "" : "disabled"}>영문 PDF</button><button class="button primary" data-quote-action="record-dispatch" ${canPublish ? "" : "disabled"}>발송 기록</button><button class="button secondary" data-quote-action="mark-won" ${canResult ? "" : "disabled"}>수주</button><button class="button secondary" data-quote-action="mark-lost" ${canResult ? "" : "disabled"}>실주</button><button class="button secondary" data-quote-action="mark-on-hold" ${canResult ? "" : "disabled"}>보류</button></div>${item.dispatchedAt ? `<p class="quote-dispatch">${item.dispatchedAt} · ${item.dispatchMemo}</p>` : ""}`;
+  }
+
+  function renderQuoteModule() {
+    renderQuoteOverview();
+    renderInquiryList();
+    renderQuotationList();
+    selectQuoteTab(state.quoteTab);
+  }
+
+  function updateQuotationStatus(item, status, message) {
+    item.status = status;
+    item.revisions[item.revisions.length - 1].status = status;
+    renderQuoteModule();
+    showToast(message);
+  }
+
+  function handleQuoteAction(action, target) {
+    const item = quotationData.quotations.find((quotation) => quotation.id === state.selectedQuotationId);
+    if (action === "select-tab") { selectQuoteTab(target.dataset.quoteTab); return; }
+    if (action === "new-inquiry") { const user = data.users.find((entry) => entry.id === state.currentUserId); const created = { id: `qi${quotationData.inquiries.length + 1}`, number: `INQ-202610-${String(quotationData.inquiries.length + 1).padStart(3, "0")}`, title: "신규 고객문의", customer: "거래처 미지정", contact: "담당자 미지정", ownerId: user.id, owner: user.name, receivedAt: quotationData.asOf, dueAt: "2026-10-15", status: "received", channel: "E-Mail", summary: "문의 내용을 입력하세요.", attachments: [], activities: ["10/08 문의 등록"] }; quotationData.inquiries.unshift(created); state.selectedInquiryId = created.id; renderQuoteModule(); selectQuoteTab("inquiries"); showToast("신규 문의를 등록했습니다. (목업)"); return; }
+    if (action === "select-inquiry") { state.selectedInquiryId = target.dataset.inquiryId; selectQuoteTab("inquiries"); renderInquiryList(); return; }
+    if (action === "select-quotation") { state.selectedQuotationId = target.dataset.quotationId; selectQuoteTab("quotations"); renderQuotationList(); return; }
+    if (action === "add-activity") { const inquiry = quotationData.inquiries.find((entry) => entry.id === state.selectedInquiryId); inquiry.activities.push("10/08 고객 대응 메모 추가"); renderInquiryDetail(); showToast("활동 이력을 추가했습니다. (목업)"); return; }
+    if (action === "create-quote") { state.selectedQuotationId = quotationData.quotations.find((quotation) => quotation.inquiryId === state.selectedInquiryId)?.id || "q2"; selectQuoteTab("quotations"); renderQuotationList(); showToast("연결 견적 작성 화면을 열었습니다. (목업)"); return; }
+    if (!item) return;
+    if (action === "add-line") { item.lines.push({ product: "Tact Switch 6×6", quantity: 1000, unitPrice: item.currency === "KRW" ? 150 : 0.35 }); renderQuotationList(); showToast("견적 품목을 추가했습니다. (목업)"); return; }
+    if (action === "request-approval") { if (item.tradeType === "export" && (!item.incoterm || !item.namedPlace)) { showToast("수출 견적은 Incoterms와 지정 장소가 필요합니다."); return; } updateQuotationStatus(item, "approvalRequested", "팀장 승인을 요청했습니다."); return; }
+    if (action === "approve") { if (state.role !== "manager") return; updateQuotationStatus(item, "approved", "견적을 승인했습니다."); return; }
+    if (action === "reject") { if (state.role !== "manager") return; item.rejectionReason = "단가 및 납기 조건을 다시 확인해 주세요."; updateQuotationStatus(item, "rejected", "견적을 반려했습니다."); return; }
+    if (action === "download-pdf-ko") { showToast("국문 PDF 미리보기를 생성했습니다. (목업)"); return; }
+    if (action === "download-pdf-en") { showToast("영문 PDF 미리보기를 생성했습니다. (목업)"); return; }
+    if (action === "record-dispatch") { item.dispatchedAt = "2026-10-08 14:30"; item.dispatchMemo = "고객에게 PDF 이메일 발송"; updateQuotationStatus(item, "dispatched", "발송 일시와 메모를 기록했습니다."); return; }
+    if (action === "mark-won") { updateQuotationStatus(item, "won", "수주 결과를 기록했습니다. 출고·매출과는 연결되지 않습니다."); return; }
+    if (action === "mark-lost") { updateQuotationStatus(item, "lost", "실주 결과를 기록했습니다."); return; }
+    if (action === "mark-on-hold") updateQuotationStatus(item, "onHold", "보류 결과를 기록했습니다.");
+  }
+
   function renderTargets() {
     $("#target-table").innerHTML = data.targets.map((item) => {
       const rate = Math.round((item.actual / item.target) * 1000) / 10;
@@ -350,6 +480,7 @@
     renderResearchCandidates();
     renderResearchCandidateDetail();
     renderResearchRuns();
+    renderQuoteModule();
     renderTargets();
     renderUsers();
   }
@@ -536,6 +667,16 @@
     if (duplicate) resolveResearchDuplicate(duplicate.dataset.duplicateAction);
   });
   $("#view-research").addEventListener("change", (event) => { if (event.target.id === "research-owner-select") assignResearchCandidate(event.target.value); });
+  $("#quote-inquiry-search").addEventListener("input", (event) => { state.inquirySearch = event.target.value; renderInquiryList(); });
+  $("#quote-inquiry-status").addEventListener("change", (event) => { state.inquiryStatus = event.target.value; renderInquiryList(); });
+  $("#quote-inquiry-owner").addEventListener("change", (event) => { state.inquiryOwner = event.target.value; renderInquiryList(); });
+  $("#quotation-search").addEventListener("input", (event) => { state.quotationSearch = event.target.value; renderQuotationList(); });
+  $("#quotation-status").addEventListener("change", (event) => { state.quotationStatus = event.target.value; renderQuotationList(); });
+  $("#quotation-currency").addEventListener("change", (event) => { state.quotationCurrency = event.target.value; renderQuotationList(); });
+  $("#view-quotes").addEventListener("click", (event) => {
+    const target = event.target.closest("[data-quote-action]");
+    if (target && !target.disabled) handleQuoteAction(target.dataset.quoteAction, target);
+  });
   document.addEventListener("keydown", (event) => { if (event.key === "Escape") closeDialog(); });
 
   updateImportStep(1);

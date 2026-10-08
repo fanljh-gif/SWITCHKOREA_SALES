@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>스위치코리아 영업관리 — SWITCH KOREA</title>
-  <link rel="stylesheet" href="styles.css?v=4">
+  <link rel="stylesheet" href="styles.css?v=5">
 </head>
 <body>
   <section class="login-screen" id="login-screen" aria-label="로그인">
@@ -50,13 +50,14 @@
         <button class="nav-item active" data-view="dashboard"><span class="nav-icon">⌂</span><span>대시보드</span></button>
         <p class="nav-section">SALES</p>
         <button class="nav-item" data-view="customers"><span class="nav-icon">◇</span><span>거래처 관리</span></button>
-        <button class="nav-item" data-view="network"><span class="nav-icon">⑂</span><span>영업망 관리</span></button>
-        <button class="nav-item" data-view="research"><span class="nav-icon">◎</span><span>잠재고객 리서치</span><span class="nav-badge">5</span></button>
         <button class="nav-item" data-view="catalog"><span class="nav-icon">▦</span><span>품목·단가 관리</span></button>
         <button class="nav-item" data-view="shipments"><span class="nav-icon">→</span><span>출고·매출 관리</span><span class="nav-badge">3</span></button>
-        <button class="nav-item" data-view="imports"><span class="nav-icon">⇧</span><span>Excel 가져오기</span></button>
+        <button class="nav-item" data-view="quotes"><span class="nav-icon">▤</span><span>견적·고객문의</span><span class="nav-badge">4</span></button>
         <p class="nav-section">MANAGEMENT</p>
         <button class="nav-item manager-only" data-view="settings"><span class="nav-icon">↗</span><span>환율·목표 관리</span></button>
+        <button class="nav-item" data-view="network"><span class="nav-icon">⑂</span><span>영업망 관리</span></button>
+        <button class="nav-item" data-view="research"><span class="nav-icon">◎</span><span>잠재고객 리서치</span><span class="nav-badge">5</span></button>
+        <button class="nav-item" data-view="imports"><span class="nav-icon">⇧</span><span>Excel 가져오기</span></button>
         <button class="nav-item manager-only" data-view="admin"><span class="nav-icon">⚙</span><span>시스템 관리</span></button>
       </nav>
       <div class="sidebar-footer"><span class="status-dot"></span><span>시스템 정상</span><small>v0.1 Mockup</small></div>
@@ -211,6 +212,40 @@
           <article class="panel table-panel"><div class="table-summary"><p><strong>5건</strong>의 출고 내역</p><p>합계 <strong>₩72,961,100</strong></p></div><div class="table-wrap"><table><thead><tr><th>출고일</th><th>출고번호</th><th>거래처 / 품목</th><th class="right">수량</th><th class="right">단가</th><th class="right">공급가액</th><th>적용환율</th><th class="right">원화 환산</th><th>상태</th><th></th></tr></thead><tbody id="shipment-table"></tbody></table></div></article>
         </section>
 
+        <section class="view" id="view-quotes" data-title="견적·고객문의">
+          <div class="section-header quote-header"><div><p class="eyebrow">B2B QUOTATION & INQUIRY</p><h2>견적·고객문의</h2><p>문의 접수부터 승인, PDF 발행, 발송 및 결과까지 관리합니다.</p></div><div><button class="button secondary" data-quote-action="new-inquiry">+ 문의 등록</button><button class="button primary" data-quote-action="create-quote">+ 견적 작성</button></div></div>
+          <div class="quote-tabs" role="tablist">
+            <button class="active" data-quote-action="select-tab" data-quote-tab="overview">현황</button>
+            <button data-quote-action="select-tab" data-quote-tab="inquiries">고객문의 <span>6</span></button>
+            <button data-quote-action="select-tab" data-quote-tab="quotations">견적서 <span>8</span></button>
+          </div>
+
+          <div class="quote-tab-panel active" data-quote-panel="overview">
+            <div class="quote-kpi-grid">
+              <article><span>미답변 문의</span><strong id="quote-kpi-unanswered">0</strong><small>답변 완료 전</small></article>
+              <article class="danger"><span>답변기한 초과</span><strong id="quote-kpi-overdue">0</strong><small>우선 대응 필요</small></article>
+              <article class="warning"><span>승인 대기</span><strong id="quote-kpi-approval">0</strong><small>팀장 확인 필요</small></article>
+              <article><span>당월 견적</span><strong id="quote-kpi-month">0건</strong><small id="quote-kpi-currencies">KRW · USD · CNY</small></article>
+              <article><span>수주·실주·보류</span><strong id="quote-kpi-results">0 · 0 · 0</strong><small>출고·매출과 별도 관리</small></article>
+              <article class="accent"><span>수주율</span><strong id="quote-kpi-win-rate">0%</strong><small>수주 ÷ (수주 + 실주)</small></article>
+            </div>
+            <div class="quote-overview-grid">
+              <article class="panel table-panel"><div class="panel-head"><div><h3>우선 대응 문의</h3><p>기한 초과 및 미답변 순</p></div><button class="text-button" data-quote-action="select-tab" data-quote-tab="inquiries">전체 보기 →</button></div><div class="table-wrap"><table><thead><tr><th>문의</th><th>거래처</th><th>담당자</th><th>답변기한</th><th>상태</th></tr></thead><tbody id="quote-priority-inquiries"></tbody></table></div></article>
+              <article class="panel table-panel"><div class="panel-head"><div><h3>승인 대기 견적</h3><p>팀장 결정을 기다리는 견적</p></div><button class="text-button" data-quote-action="select-tab" data-quote-tab="quotations">전체 보기 →</button></div><div class="table-wrap"><table><thead><tr><th>견적번호</th><th>거래처</th><th>담당자</th><th class="right">금액</th><th>상태</th></tr></thead><tbody id="quote-pending-approvals"></tbody></table></div></article>
+            </div>
+          </div>
+
+          <div class="quote-tab-panel" data-quote-panel="inquiries">
+            <div class="quote-filter-bar"><div class="search-input">⌕<input id="quote-inquiry-search" placeholder="문의번호, 제목 또는 거래처 검색"></div><select id="quote-inquiry-status"><option value="all">전체 상태</option><option value="received">접수</option><option value="assigned">담당자 배정</option><option value="responding">대응 중</option><option value="quoteDrafting">견적 작성</option><option value="answered">답변 완료</option><option value="closed">종료</option></select><select id="quote-inquiry-owner"><option value="all">전체 담당자</option><option value="u2">박태원</option><option value="u3">최명철</option><option value="u4">이소연</option><option value="u5">이창선</option></select></div>
+            <div class="quote-workspace"><article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>문의번호 / 제목</th><th>거래처</th><th>담당자</th><th>답변기한</th><th>상태</th></tr></thead><tbody id="quote-inquiry-table"></tbody></table></div></article><aside class="panel quote-detail" id="quote-detail"></aside></div>
+          </div>
+
+          <div class="quote-tab-panel" data-quote-panel="quotations">
+            <div class="quote-filter-bar"><div class="search-input">⌕<input id="quotation-search" placeholder="견적번호 또는 거래처 검색"></div><select id="quotation-status"><option value="all">전체 상태</option><option value="draft">작성 중</option><option value="approvalRequested">승인 요청</option><option value="approved">승인</option><option value="rejected">반려</option><option value="dispatched">발송 완료</option><option value="won">수주</option><option value="lost">실주</option><option value="onHold">보류</option></select><select id="quotation-currency"><option value="all">전체 통화</option><option>KRW</option><option>USD</option><option>CNY</option></select></div>
+            <div class="quote-workspace"><article class="panel table-panel"><div class="table-wrap"><table><thead><tr><th>견적번호</th><th>거래처</th><th>거래</th><th>담당자</th><th class="right">합계</th><th>상태</th></tr></thead><tbody id="quotation-table"></tbody></table></div></article><aside class="panel quote-detail" id="quotation-detail"></aside></div>
+          </div>
+        </section>
+
         <section class="view" id="view-imports" data-title="Excel 가져오기">
           <div class="section-header"><div><p class="eyebrow">DATA IMPORT</p><h2>Excel 가져오기</h2><p>ERP 및 기존 Excel 자료를 검증한 후 안전하게 반영합니다.</p></div><button class="button secondary">표준 양식 다운로드</button></div>
           <div class="import-layout">
@@ -257,7 +292,7 @@
 
   <div class="toast is-hidden" id="toast"><span>✓</span><p id="toast-message">처리되었습니다.</p></div>
 
-  <script src="mock-data.js?v=4"></script>
-  <script src="app.js?v=4"></script>
+  <script src="mock-data.js?v=5"></script>
+  <script src="app.js?v=5"></script>
 </body>
 </html>

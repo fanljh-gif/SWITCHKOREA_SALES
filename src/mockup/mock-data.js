@@ -115,3 +115,35 @@ window.SALES_MOCK_DATA = {
     { id: "re5", candidateId: "pc6", title: "Appliance control assembly", url: "https://vina-appliance.example/products", observedAt: "2026-10-04", confidence: "높음" }
   ]
 };
+
+window.quotationMockData = {
+  asOf: "2026-10-08",
+  inquiryStatuses: {
+    received: "접수", assigned: "담당자 배정", responding: "대응 중",
+    quoteDrafting: "견적 작성", answered: "답변 완료", closed: "종료"
+  },
+  quotationStatuses: {
+    draft: "작성 중", approvalRequested: "승인 요청", approved: "승인",
+    rejected: "반려", dispatched: "발송 완료", won: "수주", lost: "실주", onHold: "보류"
+  },
+  incotermsLabel: "Incoterms",
+  incoterms: ["EXW", "FCA", "FOB", "CIF", "DAP", "DDP"],
+  inquiries: [
+    { id: "qi1", number: "INQ-202610-001", title: "Tact Switch 양산 견적 요청", customer: "대성전자", contact: "김현수 부장", ownerId: "u2", owner: "박태원", receivedAt: "2026-10-02", dueAt: "2026-10-07", status: "responding", channel: "E-Mail", summary: "월 120,000EA 기준 납기와 단가 요청", attachments: ["Tact_Spec.pdf"], activities: ["10/02 문의 접수", "10/03 담당자 배정", "10/06 사양 확인 회신"] },
+    { id: "qi2", number: "INQ-202610-002", title: "Micro Switch 수출 조건 문의", customer: "Horizon Controls", contact: "Emily Carter", ownerId: "u3", owner: "최명철", receivedAt: "2026-10-03", dueAt: "2026-10-10", status: "quoteDrafting", channel: "E-Mail", summary: "CIF Los Angeles 조건 18,000EA 견적 요청", attachments: ["RFQ_2026_104.xlsx"], activities: ["10/03 문의 접수", "10/04 기술 검토 완료", "10/07 견적 작성 시작"] },
+    { id: "qi3", number: "INQ-202610-003", title: "Rotary Switch 단가 문의", customer: "上海精密科技", contact: "王伟 经理", ownerId: "u4", owner: "이소연", receivedAt: "2026-10-04", dueAt: "2026-10-09", status: "assigned", channel: "전화", summary: "신규 모델 적용용 30,000EA 단가 문의", attachments: [], activities: ["10/04 문의 접수", "10/04 이소연 담당 배정"] },
+    { id: "qi4", number: "INQ-202610-004", title: "Slide Switch 샘플 및 양산가", customer: "한빛오토텍", contact: "윤도현 과장", ownerId: "u5", owner: "이창선", receivedAt: "2026-10-05", dueAt: "2026-10-12", status: "received", channel: "방문", summary: "샘플 20EA와 양산 50,000EA 견적 요청", attachments: ["도면.jpg"], activities: ["10/05 방문 문의 접수"] },
+    { id: "qi5", number: "INQ-202609-018", title: "Detector Switch 대체품 문의", customer: "Nexa Devices", contact: "Minh Tran", ownerId: "u2", owner: "박태원", receivedAt: "2026-09-25", dueAt: "2026-10-02", status: "answered", channel: "E-Mail", summary: "단종 예정 부품의 대체 모델 요청", attachments: [], activities: ["09/25 문의 접수", "10/01 대체 모델 회신", "10/02 답변 완료"] },
+    { id: "qi6", number: "INQ-202609-014", title: "방수형 Micro Switch 사양", customer: "세진모듈", contact: "박지영 과장", ownerId: "u3", owner: "최명철", receivedAt: "2026-09-18", dueAt: "2026-09-25", status: "closed", channel: "E-Mail", summary: "IP67 등급 적용 가능 여부", resultMemo: "고객 사양 변경으로 문의 종료", attachments: [], activities: ["09/18 문의 접수", "09/24 기술 답변", "09/25 고객 요청으로 종료"] }
+  ],
+  quotations: [
+    { id: "q1", inquiryId: "qi1", number: "SWK-202610-001", revision: "Rev.1", customer: "대성전자", ownerId: "u2", owner: "박태원", currency: "KRW", tradeType: "domestic", taxType: "exclusive", status: "approvalRequested", validUntil: "2026-10-31", discount: 170400, shipping: 120000, otherCost: 0, lines: [{ product: "Tact Switch 6×6", quantity: 120000, unitPrice: 142 }], revisions: [{ revision: "Rev.0", status: "rejected", note: "초도 할인 근거 보완" }, { revision: "Rev.1", status: "approvalRequested", note: "할인 및 납기 보완" }] },
+    { id: "q2", inquiryId: "qi2", number: "SWK-202610-002", revision: "Rev.0", customer: "Horizon Controls", ownerId: "u3", owner: "최명철", currency: "USD", tradeType: "export", incoterm: "CIF", namedPlace: "Port of Los Angeles", taxType: "exempt", status: "draft", validUntil: "2026-10-25", discount: 0, shipping: 850, otherCost: 120, lines: [{ product: "Micro Switch", quantity: 18000, unitPrice: 0.84 }], revisions: [{ revision: "Rev.0", status: "draft", note: "최초 작성" }] },
+    { id: "q3", inquiryId: "qi3", number: "SWK-202610-003", revision: "Rev.0", customer: "上海精密科技", ownerId: "u4", owner: "이소연", currency: "CNY", tradeType: "export", incoterm: "FOB", namedPlace: "Busan Port", taxType: "exempt", status: "approved", validUntil: "2026-10-28", discount: 0, shipping: 0, otherCost: 800, lines: [{ product: "Rotary Switch", quantity: 30000, unitPrice: 4.2 }], revisions: [{ revision: "Rev.0", status: "approved", note: "팀장 승인 완료" }] },
+    { id: "q4", inquiryId: "qi4", number: "SWK-202610-004", revision: "Rev.0", customer: "한빛오토텍", ownerId: "u5", owner: "이창선", currency: "KRW", tradeType: "domestic", taxType: "inclusive", status: "rejected", rejectionReason: "샘플비와 양산 단가를 분리해 주세요.", validUntil: "2026-10-31", discount: 0, shipping: 80000, otherCost: 20000, lines: [{ product: "Slide Switch", quantity: 50000, unitPrice: 318 }], revisions: [{ revision: "Rev.0", status: "rejected", note: "샘플비 분리 필요" }] },
+    { id: "q5", inquiryId: "qi5", number: "SWK-202610-005", revision: "Rev.0", customer: "Nexa Devices", ownerId: "u2", owner: "박태원", currency: "USD", tradeType: "export", incoterm: "DAP", namedPlace: "Hanoi Plant", taxType: "exempt", status: "dispatched", dispatchedAt: "2026-10-06 15:40", dispatchMemo: "영문 PDF 이메일 발송", validUntil: "2026-10-30", discount: 50, shipping: 420, otherCost: 0, lines: [{ product: "Detector Switch", quantity: 10000, unitPrice: 0.37 }], revisions: [{ revision: "Rev.0", status: "dispatched", note: "고객 발송" }] },
+    { id: "q6", number: "SWK-202610-006", revision: "Rev.0", customer: "대성전자", ownerId: "u2", owner: "박태원", currency: "KRW", tradeType: "domestic", taxType: "exclusive", status: "won", resultMemo: "2026년 4분기 양산 수주", validUntil: "2026-10-20", discount: 0, shipping: 0, otherCost: 0, lines: [{ product: "Micro Switch", quantity: 80000, unitPrice: 895 }], revisions: [{ revision: "Rev.0", status: "won", note: "수주 확정" }] },
+    { id: "q7", number: "SWK-202610-007", revision: "Rev.0", customer: "Horizon Controls", ownerId: "u3", owner: "최명철", currency: "USD", tradeType: "export", incoterm: "FOB", namedPlace: "Busan Port", taxType: "exempt", status: "lost", resultMemo: "가격 경쟁력 사유", validUntil: "2026-10-18", discount: 0, shipping: 0, otherCost: 0, lines: [{ product: "Tact Switch 6×6", quantity: 25000, unitPrice: 0.29 }], revisions: [{ revision: "Rev.0", status: "lost", note: "실주 등록" }] },
+    { id: "q8", number: "SWK-202610-008", revision: "Rev.0", customer: "上海精密科技", ownerId: "u4", owner: "이소연", currency: "CNY", tradeType: "export", incoterm: "FCA", namedPlace: "SWITCH KOREA Warehouse", taxType: "exempt", status: "onHold", resultMemo: "고객 프로젝트 일정 연기", validUntil: "2026-11-15", discount: 0, shipping: 300, otherCost: 0, lines: [{ product: "Rotary Switch", quantity: 20000, unitPrice: 4.1 }], revisions: [{ revision: "Rev.0", status: "onHold", note: "프로젝트 보류" }] }
+  ]
+};
