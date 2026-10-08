@@ -22,6 +22,8 @@ using SalesManagement.Api.Workers;
 using SalesManagement.Core.Repositories;
 using SalesManagement.Core.Shipments;
 using SalesManagement.Core.Targets;
+using SalesManagement.Core.Quotations;
+using SalesManagement.Api.Quotations;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Logging.ClearProviders();
@@ -55,6 +57,10 @@ builder.Services.AddScoped<DuplicateDetectionService>();
 builder.Services.AddScoped<ProspectReviewService>();
 builder.Services.AddScoped<ResearchRunService>();
 builder.Services.AddScoped<ProspectExcelService>();
+builder.Services.AddScoped<InquiryService>();
+builder.Services.AddScoped<QuoteService>();
+builder.Services.AddScoped<QuotationDashboardService>();
+builder.Services.AddSingleton<IQuotePdfRenderer, SimpleQuotePdfRenderer>();
 builder.Services.Configure<ResearchProviderOptions>(builder.Configuration.GetSection(ResearchProviderOptions.SectionName));
 builder.Services.AddHttpClient<OpenAiProspectResearchProvider>(client => client.Timeout = TimeSpan.FromSeconds(45));
 builder.Services.AddScoped<IProspectResearchProvider>(provider =>
@@ -99,6 +105,9 @@ app.MapImportEndpoints();
 app.MapAdminEndpoints();
 app.MapNetworkEndpoints();
 app.MapResearchEndpoints();
+app.MapInquiryEndpoints();
+app.MapQuoteEndpoints();
+app.MapIncotermEndpoints();
 app.MapFallbackToFile("index.html");
 app.Run();
 

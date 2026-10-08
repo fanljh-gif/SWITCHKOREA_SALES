@@ -1,0 +1,24 @@
+using SalesManagement.Core.Models; using SalesManagement.Core.Quotations; using SalesManagement.Core.Repositories;
+namespace SalesManagement.Api.Endpoints;
+public static class QuoteEndpoints
+{
+    public static IEndpointRouteBuilder MapQuoteEndpoints(this IEndpointRouteBuilder endpoints)
+    {
+        var group = endpoints.MapGroup("/api/quotes").RequireAuthorization();
+        group.MapGet("/dashboard", async (Guid? ownerId, QuotationDashboardService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.GetAsync(new(ownerId), await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapGet("", async (string? search, Guid? ownerId, Guid? customerId, QuoteStatus? status, Currency? currency, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok((await service.ListAsync(new(search, ownerId, customerId, status, currency), await QuotationEndpointSupport.Actor(c, users, ct), ct)).Select(Response)));
+        group.MapGet("/{id:guid}", async (Guid id, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(Response(await service.GetAsync(id, await QuotationEndpointSupport.Actor(c, users, ct), ct))));
+        group.MapPost("", async (CreateQuoteCommand r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(Response(await service.CreateAsync(r, await QuotationEndpointSupport.Actor(c, users, ct), ct))));
+        group.MapPut("/{id:guid}/revisions/{revisionId:guid}", async (Guid id, Guid revisionId, SaveQuoteRevisionCommand r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.SaveRevisionAsync(id, revisionId, r, await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapPost("/{id:guid}/revisions/{revisionId:guid}/submit", async (Guid id, Guid revisionId, VersionRequest r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.SubmitAsync(id, revisionId, r.ExpectedVersion, await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapPost("/{id:guid}/revisions/{revisionId:guid}/approve", async (Guid id, Guid revisionId, VersionRequest r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.ApproveAsync(id, revisionId, r.ExpectedVersion, await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapPost("/{id:guid}/revisions/{revisionId:guid}/reject", async (Guid id, Guid revisionId, RejectRequest r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.RejectAsync(id, revisionId, r.Reason, r.ExpectedVersion, await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapPost("/{id:guid}/revisions", async (Guid id, VersionRequest r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.CreateRevisionAsync(id, r.ExpectedVersion, await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapGet("/{id:guid}/revisions/{revisionId:guid}/pdf", async (Guid id, Guid revisionId, QuoteLanguage language, QuoteService service, IQuotePdfRenderer renderer, IUserRepository users, HttpContext c, CancellationToken ct) => { var model = await service.GetPdfModelAsync(id, revisionId, language, await QuotationEndpointSupport.Actor(c, users, ct), ct); return Results.File(renderer.Render(model), "application/pdf", $"{model.QuoteNumber}-{model.RevisionLabel}-{language.ToString().ToLowerInvariant()}.pdf"); });
+        group.MapPost("/{id:guid}/revisions/{revisionId:guid}/dispatch", async (Guid id, Guid revisionId, RecordDispatchCommand r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(await service.RecordDispatchAsync(id, revisionId, r, await QuotationEndpointSupport.Actor(c, users, ct), ct)));
+        group.MapPost("/{id:guid}/revisions/{revisionId:guid}/result", async (Guid id, Guid revisionId, ResultRequest r, QuoteService service, IUserRepository users, HttpContext c, CancellationToken ct) => Results.Ok(Response(await service.RecordResultAsync(id, r.Result, r.Note, r.ExpectedVersion, await QuotationEndpointSupport.Actor(c, users, ct), ct))));
+        return endpoints;
+    }
+    private static object Response(Quote x) { var current = x.Revisions.Single(r => r.Id == x.CurrentRevisionId); return new { x.Id, x.QuoteNumber, x.InquiryId, x.CustomerId, x.CustomerName, ownerId = x.OwnerUserId, x.CurrentRevisionId, currentRevision = current, x.Revisions, x.Result, x.ResultNote, x.Version }; }
+    public sealed record VersionRequest(long ExpectedVersion); public sealed record RejectRequest(string Reason, long ExpectedVersion); public sealed record ResultRequest(QuoteStatus Result, string? Note, long ExpectedVersion);
+}

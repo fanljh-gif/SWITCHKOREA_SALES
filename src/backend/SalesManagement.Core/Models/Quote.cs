@@ -1,0 +1,2 @@
+namespace SalesManagement.Core.Models;
+public sealed class Quote : EntityBase { public required string QuoteNumber { get; set; } public Guid? InquiryId { get; set; } public Guid CustomerId { get; set; } public required string CustomerName { get; set; } public Guid OwnerUserId { get; set; } public Guid CurrentRevisionId { get; set; } public List<QuoteRevision> Revisions { get; set; } = []; public QuoteStatus? Result { get; set; } public string? ResultNote { get; set; } }
