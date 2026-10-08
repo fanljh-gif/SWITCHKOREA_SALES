@@ -30,12 +30,12 @@ export function useSalesApi(): SalesApi {
 const navigation = [
   { path: '/dashboard', label: '대시보드', managerOnly: false },
   { path: '/customers', label: '거래처 관리', managerOnly: false },
-  { path: '/network', label: '영업망 관리', managerOnly: false },
-  { path: '/research', label: '잠재고객 리서치', managerOnly: false },
   { path: '/catalog', label: '품목·단가 관리', managerOnly: false },
   { path: '/shipments', label: '출고·매출 관리', managerOnly: false },
-  { path: '/imports', label: 'Excel 가져오기', managerOnly: false },
   { path: '/settings', label: '환율·목표 관리', managerOnly: true },
+  { path: '/network', label: '영업망 관리', managerOnly: false },
+  { path: '/research', label: '잠재고객 리서치', managerOnly: false },
+  { path: '/imports', label: 'Excel 가져오기', managerOnly: false },
   { path: '/admin', label: '시스템 관리', managerOnly: true },
 ] as const
 
