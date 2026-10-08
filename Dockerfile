@@ -17,6 +17,9 @@ RUN dotnet publish backend/SalesManagement.Api/SalesManagement.Api.csproj -c Rel
 FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && rm -rf /var/lib/apt/lists/*
 COPY --from=backend-build /publish/api/ /app/
 COPY --from=backend-build /publish/setup/ /setup/
 COPY --from=frontend-build /src/frontend/dist/ /app/wwwroot/

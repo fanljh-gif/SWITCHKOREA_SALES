@@ -60,6 +60,7 @@ Assert-True ($dockerfile -match 'SalesManagement\.DbTests') 'Docker build must e
 Assert-True ($dockerfile -match '(?m)^FROM mcr\.microsoft\.com/dotnet/sdk:10\.0 AS backend-build\s*$') 'Dockerfile must use the published .NET 10 SDK tag.'
 Assert-True ($dockerfile -match '(?m)^FROM mcr\.microsoft\.com/dotnet/aspnet:10\.0 AS runtime\s*$') 'Dockerfile must use the published ASP.NET 10 runtime tag.'
 Assert-True ($dockerfile -notmatch 'dotnet/(?:sdk|aspnet):10\.0-bookworm-slim') 'Dockerfile references an unavailable .NET 10 bookworm-slim tag.'
+Assert-True ($dockerfile -match '\blibgssapi-krb5-2\b') 'Runtime image must include the GSSAPI library required by Npgsql probing.'
 
 $render = Get-Command render -ErrorAction SilentlyContinue
 if ($render) {

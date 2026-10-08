@@ -1,5 +1,6 @@
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.ChangeTracking;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 using SalesManagement.Core.Models;
 
@@ -8,10 +9,19 @@ namespace SalesManagement.Postgres.Configurations;
 internal static class ResearchJson
 {
     private static readonly JsonSerializerOptions Options = new(JsonSerializerDefaults.Web);
+    private static readonly ValueComparer<List<string>> StringListComparer = new(
+        (left, right) => left != null && right != null && left.SequenceEqual(right),
+        values => values.Aggregate(0, (hash, value) => HashCode.Combine(hash, value.GetHashCode())),
+        values => values.ToList());
+
     public static string Write(List<string> value) => JsonSerializer.Serialize(value, Options);
     public static List<string> Read(string value) => JsonSerializer.Deserialize<List<string>>(value, Options) ?? [];
-    public static void StringList<T>(PropertyBuilder<List<T>> property) where T : notnull => throw new NotSupportedException();
-    public static PropertyBuilder<List<string>> StringList(PropertyBuilder<List<string>> property) => property.HasConversion(v => Write(v), v => Read(v)).HasColumnType("jsonb");
+    public static PropertyBuilder<List<string>> StringList(PropertyBuilder<List<string>> property)
+    {
+        var configured = property.HasConversion(v => Write(v), v => Read(v)).HasColumnType("jsonb");
+        configured.Metadata.SetValueComparer(StringListComparer);
+        return configured;
+    }
 }
 
 public sealed class ResearchTargetProfileConfiguration : IEntityTypeConfiguration<ResearchTargetProfile>

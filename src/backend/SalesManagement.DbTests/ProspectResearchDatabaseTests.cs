@@ -47,6 +47,36 @@ public sealed class ProspectResearchDatabaseTests
         Assert.All(activity.GetForeignKeys(), x => Assert.Equal(DeleteBehavior.Restrict, x.DeleteBehavior));
     }
 
+    [Fact]
+    public async Task Json_String_Collections_Have_Value_Comparers()
+    {
+        await using var fixture = await Fixture.CreateAsync();
+        var designModel = fixture.Context.GetService<IDesignTimeModel>().Model;
+        var properties = new[]
+        {
+            (typeof(ResearchTargetProfile), nameof(ResearchTargetProfile.Regions)),
+            (typeof(ResearchTargetProfile), nameof(ResearchTargetProfile.Industries)),
+            (typeof(ResearchTargetProfile), nameof(ResearchTargetProfile.IncludeKeywords)),
+            (typeof(ResearchTargetProfile), nameof(ResearchTargetProfile.ExcludeKeywords)),
+            (typeof(ProspectCandidate), nameof(ProspectCandidate.Products)),
+            (typeof(ProspectCandidate), nameof(ProspectCandidate.Applications)),
+            (typeof(ProspectAssessment), nameof(ProspectAssessment.AiRisks)),
+            (typeof(ProspectDuplicateMatch), nameof(ProspectDuplicateMatch.Reasons))
+        };
+
+        foreach (var (entityType, propertyName) in properties)
+        {
+            var property = designModel.FindEntityType(entityType)!.FindProperty(propertyName)!;
+            var comparer = property.GetValueComparer();
+            var original = new List<string> { "switch", "relay" };
+            var equivalent = new List<string> { "switch", "relay" };
+            var snapshot = Assert.IsType<List<string>>(comparer.Snapshot(original));
+            Assert.True(comparer.Equals(original, equivalent));
+            Assert.NotSame(original, snapshot);
+            Assert.Equal(original, snapshot);
+        }
+    }
+
     private static ProspectCandidate Candidate(Guid runId, string source, List<string>? products = null) => new() { ResearchRunId = runId, ProviderResultId = source, CompanyName = "Acme", NormalizedCompanyName = "acme", Country = "US", Region = "미국", Industry = "전자", Domain = "acme.example", NormalizedDomain = "acme.example", Website = "https://acme.example", Products = products ?? [] };
 
     private sealed class Fixture : IAsyncDisposable
