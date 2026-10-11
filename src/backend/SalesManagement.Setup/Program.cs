@@ -8,6 +8,21 @@ using SalesManagement.Postgres.Configuration;
 using SalesManagement.Postgres.Repositories;
 using SalesManagement.Setup;
 
+var generateResetLogin = GetOption(args, "--generate-password-reset-login");
+if (generateResetLogin is not null)
+{
+    var resetCredentialsPath = GetOption(args, "--credentials-path")
+        ?? throw new ArgumentException("--credentials-path is required when generating password reset artifacts.");
+    var hashPath = GetOption(args, "--hash-path")
+        ?? throw new ArgumentException("--hash-path is required when generating password reset artifacts.");
+    var artifact = new PasswordResetArtifactGenerator(new PasswordHasher<User>()).Generate(generateResetLogin);
+    var writer = new InitialCredentialWriter();
+    writer.Write(resetCredentialsPath, [new InitialCredential(artifact.LoginId, artifact.TemporaryPassword)]);
+    writer.WriteHash(hashPath, artifact.PasswordHash);
+    Console.WriteLine($"Password reset artifacts written for: {artifact.LoginId}");
+    return;
+}
+
 var connectionString = Environment.GetEnvironmentVariable("ConnectionStrings__SalesManagement");
 var databaseUrl = Environment.GetEnvironmentVariable("DATABASE_URL");
 if (string.IsNullOrWhiteSpace(connectionString) && !string.IsNullOrWhiteSpace(databaseUrl))
@@ -17,6 +32,10 @@ if (string.IsNullOrWhiteSpace(connectionString))
 
 var credentialsPath = GetOption(args, "--credentials-path")
     ?? @"C:\SwitchKorea\Secrets\initial-credentials.txt";
+var resetLogin = GetOption(args, "--reset-password-hash-login");
+var resetHash = GetOption(args, "--password-hash");
+if ((resetLogin is null) != (resetHash is null))
+    throw new ArgumentException("--reset-password-hash-login and --password-hash must be provided together.");
 var migrateOnly = args.Contains("--migrate-only", StringComparer.OrdinalIgnoreCase);
 var seedOnly = args.Contains("--seed-only", StringComparer.OrdinalIgnoreCase);
 if (migrateOnly && seedOnly)
@@ -28,7 +47,8 @@ services.AddDbContext<SalesDbContext>(options => options.UseNpgsql(connectionStr
 services.AddScoped<IUserRepository, UserRepository>();
 services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 services.AddScoped<InitialAccountSeeder>();
-services.AddSingleton<InitialCredentialWriter>();
+services.AddScoped<PasswordResetService>();
+services.AddSingleton(_ => new InitialCredentialWriter());
 await using var provider = services.BuildServiceProvider();
 await using var scope = provider.CreateAsyncScope();
 var db = scope.ServiceProvider.GetRequiredService<SalesDbContext>();
@@ -41,6 +61,13 @@ if (migrate)
 if (migrateOnly)
 {
     Console.WriteLine("Database migrations completed.");
+    return;
+}
+
+if (resetLogin is not null && resetHash is not null)
+{
+    await scope.ServiceProvider.GetRequiredService<PasswordResetService>().ResetAsync(resetLogin, resetHash);
+    Console.WriteLine($"Password reset completed for: {resetLogin}");
     return;
 }
 
