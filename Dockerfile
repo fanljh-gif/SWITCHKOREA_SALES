@@ -7,6 +7,9 @@ RUN pnpm build
 
 FROM mcr.microsoft.com/dotnet/sdk:10.0 AS backend-build
 WORKDIR /src
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends fonts-nanum \
+    && rm -rf /var/lib/apt/lists/*
 COPY src/backend/ ./backend/
 RUN dotnet restore backend/SalesManagement.sln
 RUN dotnet test backend/SalesManagement.Tests/SalesManagement.Tests.csproj -c Release --no-restore
@@ -18,7 +21,7 @@ FROM mcr.microsoft.com/dotnet/aspnet:10.0 AS runtime
 WORKDIR /app
 ENV ASPNETCORE_ENVIRONMENT=Production
 RUN apt-get update \
-    && apt-get install -y --no-install-recommends libgssapi-krb5-2 \
+    && apt-get install -y --no-install-recommends libgssapi-krb5-2 fonts-nanum \
     && rm -rf /var/lib/apt/lists/*
 COPY --from=backend-build /publish/api/ /app/
 COPY --from=backend-build /publish/setup/ /setup/

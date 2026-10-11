@@ -16,6 +16,17 @@
 - 공급자 장애 시 기존 후보와 다른 영업관리 기능은 계속 사용할 수 있다. 실패 실행은 `partial` 상태에서 재처리한다.
 - 공급자를 즉시 중지하려면 `Research__Provider=Disabled`로 되돌리고 Web Service를 재시작한다. 데이터베이스 롤백은 먼저 백업을 확보한 후 `AddProspectResearch` 직전 마이그레이션까지만 수행한다.
 
+### 견적·고객문의 모듈
+
+- 고객문의는 담당자 소유권을 적용하며 팀원은 본인 건만, 팀장은 전체 건과 담당자 변경을 처리한다.
+- 견적번호는 `SWK-YYYYMM-NNN`, 개정은 `Rev.0`부터 시작한다. 승인 요청 이후 편집은 잠기며 팀장 승인본만 PDF 생성·발송 기록이 가능하다.
+- 수출 견적은 Incoterms 코드와 지정 장소를 모두 입력한다. 국내 견적으로 바꾸면 두 값은 저장하지 않는다.
+- 국문 PDF는 Windows의 맑은 고딕, Render Linux의 `fonts-nanum` 단독 TTF로 생성한다. Docker 빌드의 테스트 단계와 런타임 모두 글꼴을 설치한다. PDFsharp는 TTC 컬렉션을 지원하지 않으므로 Noto CJK TTC를 사용하지 않는다. PDF 실패 시 런타임 글꼴 설치와 `/api/quotes/{id}/revisions/{revisionId}/pdf` 응답 로그를 확인한다.
+- 기본 Linux 파일은 `/usr/share/fonts/truetype/nanum/NanumGothic.ttf`, `NanumGothicBold.ttf`다. 별도 글꼴 폴더를 쓸 때만 서버 프로세스 환경변수 `SWITCHKOREA_PDF_FONT_DIRECTORY`에 이 두 파일이 있는 폴더를 지정하고 프로세스를 재시작한다. 웹 요청에서 폴더 경로를 받지 않으며 글꼴이 없으면 오류로 처리한다.
+- 문의 첨부는 PDF·Excel·Word·PNG·JPEG만 허용하고 파일당 10MB로 제한한다. 첨부는 PostgreSQL `bytea`에 저장되므로 백업 용량과 디스크 증가율을 함께 감시한다.
+- 수주·실주·보류는 견적 결과로만 관리하며 출고·매출 데이터를 자동 생성하지 않는다.
+- 장애 롤백 전 반드시 백업을 만든다. 애플리케이션을 이전 이미지로 되돌리더라도 `AddQuotationInquiry` 마이그레이션은 기존 문의·견적 데이터 보존을 위해 자동 하향하지 않는다.
+
 ### Render Blueprint 및 계정 초기화
 
 1. 비공개 GitHub 저장소에서 루트의 `render.yaml`을 Blueprint로 적용한다. 미리보기에는 `switch-korea-sales-test` Web Service와 `switch-korea-sales-test-db` PostgreSQL만 있어야 한다.
@@ -124,3 +135,5 @@ IIS 앱 풀은 AlwaysRunning이며, HTTP 80은 ASP.NET Core의 HTTPS 전환 경�
 - 백업 생성·SHA-256·격리 복원 건수 일치
 - 팀장 최종 승인과 승인 시각 기록
 - 리서치 API 키 미노출, 월 한도, 예약 시각, 부분실패 재처리 및 승인 근거 확인
+- 문의 등록 → 견적 작성 → 팀장 승인 → 국문·영문 PDF → 발송 → 결과 기록 확인
+- 다른 담당자 문의·견적 직접 URL 접근 시 403, 첨부 10MB 초과 시 422 확인

@@ -60,7 +60,7 @@ builder.Services.AddScoped<ProspectExcelService>();
 builder.Services.AddScoped<InquiryService>();
 builder.Services.AddScoped<QuoteService>();
 builder.Services.AddScoped<QuotationDashboardService>();
-builder.Services.AddSingleton<IQuotePdfRenderer, SimpleQuotePdfRenderer>();
+builder.Services.AddSingleton<IQuotePdfRenderer, MigraDocQuotePdfRenderer>();
 builder.Services.Configure<ResearchProviderOptions>(builder.Configuration.GetSection(ResearchProviderOptions.SectionName));
 builder.Services.AddHttpClient<OpenAiProspectResearchProvider>(client => client.Timeout = TimeSpan.FromSeconds(45));
 builder.Services.AddScoped<IProspectResearchProvider>(provider =>

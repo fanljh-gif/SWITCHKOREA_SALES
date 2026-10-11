@@ -1,7 +1,8 @@
 import type { CustomerInquiryDto, QuoteDashboardDto, QuoteDto } from '../../shared/api/contracts'
 
 export function QuoteDashboard({ summary, inquiries, quotes }: { summary: QuoteDashboardDto; inquiries: CustomerInquiryDto[]; quotes: QuoteDto[] }) {
-  const overdue = inquiries.filter((row) => !['answered', 'closed'].includes(row.status) && row.responseDueAt < '2026-10-08')
+  const today = new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Seoul' }).format(new Date())
+  const overdue = inquiries.filter((row) => !['answered', 'closed'].includes(row.status) && row.responseDueAt < today)
   const pending = quotes.filter((row) => row.currentRevision.status === 'approvalRequested')
   return <div className="quote-dashboard"><section className="quote-kpis" aria-label="견적 문의 핵심 지표"><article><span>미답변</span><strong>{summary.unansweredCount}</strong></article><article><span>기한 초과</span><strong>{summary.overdueCount}</strong></article><article><span>승인 대기</span><strong>{summary.approvalPendingCount}</strong></article><article><span>당월 견적</span><strong>{summary.monthlyQuoteCount}</strong></article><article><span>수주율</span><strong>{summary.winRatePercent}%</strong></article></section><section className="quote-priority-grid"><article><h2>기한 초과 문의</h2>{overdue.length ? overdue.map((row) => <p key={row.id} className="is-overdue">{row.inquiryNumber} · {row.customerName} · {row.responseDueAt}</p>) : <p>기한 초과 문의가 없습니다.</p>}</article><article><h2>승인 대기 견적</h2>{pending.length ? pending.map((row) => <p key={row.id}>{row.quoteNumber} · {row.customerName}</p>) : <p>승인 대기 견적이 없습니다.</p>}</article><article><h2>통화별 견적액</h2>{summary.currencyAmounts.map((row) => <p key={row.currency}>{row.currency} <strong>{row.amount.toLocaleString()}</strong></p>)}</article></section></div>
 }

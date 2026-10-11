@@ -578,6 +578,18 @@ export class MockSalesApi implements SalesApi {
     if (input.tradeType === 'domestic' && (input.incotermCode || input.namedPlace)) throw new SalesApiError(400, '국내 견적에는 Incoterms를 입력할 수 없습니다.')
   }
 
+  private commercialTerms(input: Pick<QuoteCreateInput, 'paymentTerms' | 'deliveryTerms' | 'notes'>) {
+    const normalize = (value: string | null | undefined, max: number, label: string) => {
+      if (value && value.length > max) throw new SalesApiError(422, `${label}은(는) ${max}자 이내로 입력해 주세요.`)
+      return value?.trim() || null
+    }
+    return {
+      paymentTerms: normalize(input.paymentTerms, 500, '결제조건'),
+      deliveryTerms: normalize(input.deliveryTerms, 500, '납기조건'),
+      notes: normalize(input.notes, 4000, '비고'),
+    }
+  }
+
   private touchQuote(quote: QuoteDto, revision: QuoteRevisionDto) {
     revision.version += 1
     quote.version += 1
@@ -638,16 +650,30 @@ export class MockSalesApi implements SalesApi {
     if (this.requireUser().role !== 'manager') throw new SalesApiError(403, '팀장만 문의 담당자를 변경할 수 있습니다.')
     const row = this.requireInquiry(id)
     if (row.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 고객문의를 수정했습니다.')
-    row.ownerId = ownerId; row.status = 'assigned'; row.version += 1
+    if (row.status === 'closed') throw new SalesApiError(422, '종료된 문의는 먼저 재개해야 합니다.')
+    const previousOwner = row.ownerId
+    row.ownerId = ownerId
+    if (row.status === 'received') row.status = 'assigned'
+    row.activities.push({ id: crypto.randomUUID(), inquiryId: id, kind: 'assignment', body: `담당자 변경: ${previousOwner} -> ${ownerId}`, actorId: this.requireUser().id, occurredAt: new Date().toISOString() })
+    row.version += 1
     return this.clone(row)
   }
 
   async changeInquiryStatus(id: string, status: CustomerInquiryDto['status'], resultMemo: string | undefined, expectedVersion: number): Promise<CustomerInquiryDto> {
     const row = this.requireInquiry(id)
     if (row.version !== expectedVersion) throw new SalesApiError(409, '다른 사용자가 먼저 고객문의를 수정했습니다.')
-    if (status === 'closed' && !resultMemo?.trim()) throw new SalesApiError(400, '문의 종료 메모가 필요합니다.')
-    if (row.status === 'closed' && status !== 'closed' && this.requireUser().role !== 'manager') throw new SalesApiError(403, '종료된 문의는 팀장만 다시 열 수 있습니다.')
-    row.status = status; row.resultMemo = resultMemo; row.version += 1
+    const workflow = ['received', 'assigned', 'responding', 'quoting', 'answered', 'closed']
+    const previousStatus = row.status
+    if (!workflow.includes(status)) throw new SalesApiError(422, '알 수 없는 문의 상태입니다.')
+    if (previousStatus === 'closed') {
+      if (this.requireUser().role !== 'manager') throw new SalesApiError(403, '종료된 문의는 팀장만 다시 열 수 있습니다.')
+      if (status !== 'responding') throw new SalesApiError(422, '종료된 문의는 대응 중으로 재개할 수 있습니다.')
+    } else if (workflow.indexOf(status) !== workflow.indexOf(previousStatus) + 1) throw new SalesApiError(422, '다음 업무 단계로만 상태를 변경할 수 있습니다.')
+    if (status === 'closed' && !resultMemo?.trim()) throw new SalesApiError(422, '문의 종료 메모가 필요합니다.')
+    row.status = status
+    if (status === 'closed') row.resultMemo = resultMemo!.trim()
+    row.activities.push({ id: crypto.randomUUID(), inquiryId: id, kind: 'status', body: `상태 변경: ${previousStatus} -> ${status}${resultMemo?.trim() ? ` · ${resultMemo.trim()}` : ''}`, actorId: this.requireUser().id, occurredAt: new Date().toISOString() })
+    row.version += 1
     return this.clone(row)
   }
 
@@ -697,7 +723,7 @@ export class MockSalesApi implements SalesApi {
     const amounts = this.quoteAmounts(input)
     const quoteId = crypto.randomUUID()
     const revisionId = crypto.randomUUID()
-    const revision: QuoteRevisionDto = { id: revisionId, quoteId, revisionNumber: 0, revisionLabel: 'Rev.0', status: 'draft', currency: input.currency, tradeType: input.tradeType, taxType: input.taxType, validUntil: input.validUntil, incotermCode: input.tradeType === 'export' ? input.incotermCode : null, namedPlace: input.tradeType === 'export' ? input.namedPlace : null, discountAmount: input.discountAmount, shippingAmount: input.shippingAmount, otherAmount: input.otherAmount, ...amounts, lines: input.lines.map((line) => ({ ...line, id: crypto.randomUUID(), amount: this.roundQuote(input.currency, line.quantity * line.unitPrice) })), approvals: [], dispatches: [], version: 1 }
+    const revision: QuoteRevisionDto = { id: revisionId, quoteId, revisionNumber: 0, revisionLabel: 'Rev.0', status: 'draft', currency: input.currency, tradeType: input.tradeType, taxType: input.taxType, validUntil: input.validUntil, ...this.commercialTerms(input), incotermCode: input.tradeType === 'export' ? input.incotermCode : null, namedPlace: input.tradeType === 'export' ? input.namedPlace : null, discountAmount: input.discountAmount, shippingAmount: input.shippingAmount, otherAmount: input.otherAmount, ...amounts, lines: input.lines.map((line) => ({ ...line, id: crypto.randomUUID(), amount: this.roundQuote(input.currency, line.quantity * line.unitPrice) })), approvals: [], dispatches: [], version: 1 }
     const quote: QuoteDto = { id: quoteId, quoteNumber: `SWK-202610-${String(this.quotes.length + 1).padStart(3, '0')}`, inquiryId: input.inquiryId, customerId: input.customerId, customerName: customer.companyName, ownerId: input.ownerId, currentRevisionId: revisionId, currentRevision: revision, revisions: [revision], version: 1 }
     this.quotes.push(quote)
     if (input.inquiryId) {
@@ -713,7 +739,7 @@ export class MockSalesApi implements SalesApi {
     if (!['draft', 'rejected'].includes(revision.status)) throw new SalesApiError(422, '작성 중 또는 반려된 개정본만 수정할 수 있습니다.')
     this.validateQuoteTerms(input)
     const amounts = this.quoteAmounts(input)
-    Object.assign(revision, input, amounts, { incotermCode: input.tradeType === 'export' ? input.incotermCode : null, namedPlace: input.tradeType === 'export' ? input.namedPlace : null, lines: input.lines.map((line) => ({ ...line, id: crypto.randomUUID(), amount: this.roundQuote(input.currency, line.quantity * line.unitPrice) })) })
+    Object.assign(revision, input, this.commercialTerms(input), amounts, { incotermCode: input.tradeType === 'export' ? input.incotermCode : null, namedPlace: input.tradeType === 'export' ? input.namedPlace : null, lines: input.lines.map((line) => ({ ...line, id: crypto.randomUUID(), amount: this.roundQuote(input.currency, line.quantity * line.unitPrice) })) })
     this.touchQuote(quote, revision)
     return this.clone(revision)
   }
@@ -765,9 +791,13 @@ export class MockSalesApi implements SalesApi {
   }
 
   async downloadQuotePdf(quoteId: string, revisionId: string, language: QuoteLanguage): Promise<Blob> {
-    const revision = this.requireRevision(this.requireQuote(quoteId), revisionId)
+    const quote = this.requireQuote(quoteId)
+    const revision = this.requireRevision(quote, revisionId)
     if (!['approved', 'sent', 'won', 'lost', 'onHold'].includes(revision.status)) throw new SalesApiError(422, '승인된 견적만 PDF를 생성할 수 있습니다.')
-    return new Blob([`${language}:${quoteId}:${revision.revisionLabel}`], { type: 'application/pdf' })
+    const content = `${language}:${quoteId}:${revision.revisionLabel}`
+    revision.dispatches.push({ id: crypto.randomUUID(), revisionId, sentAt: new Date().toISOString(), memo: 'PDF 생성', language, recordedBy: this.requireUser().id, pdfHash: `mock-${content}`, version: revision.version })
+    quote.version += 1
+    return new Blob([content], { type: 'application/pdf' })
   }
 
   async recordQuoteDispatch(quoteId: string, revisionId: string, input: { sentAt: string; memo: string; language?: QuoteLanguage; expectedVersion: number }): Promise<QuoteDispatchDto> {

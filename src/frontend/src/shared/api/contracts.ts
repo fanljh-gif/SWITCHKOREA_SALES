@@ -504,6 +504,7 @@ export interface QuoteDispatchDto {
   memo: string
   language: QuoteLanguage
   recordedBy: string
+  pdfHash?: string
   version: number
 }
 
@@ -519,6 +520,9 @@ export interface QuoteRevisionDto {
   validUntil: string
   incotermCode: string | null
   namedPlace: string | null
+  paymentTerms?: string | null
+  deliveryTerms?: string | null
+  notes?: string | null
   discountAmount: number
   shippingAmount: number
   otherAmount: number
@@ -565,6 +569,9 @@ export interface QuoteCreateInput {
   validUntil: string
   incotermCode: string | null
   namedPlace: string | null
+  paymentTerms?: string | null
+  deliveryTerms?: string | null
+  notes?: string | null
   discountAmount: number
   shippingAmount: number
   otherAmount: number

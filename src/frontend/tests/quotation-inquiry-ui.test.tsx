@@ -1,6 +1,8 @@
 import '@testing-library/jest-dom/vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
-import { describe, expect, it } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { describe, expect, it, vi } from 'vitest'
+import { InquiryDetail } from '../src/features/quotes/InquiryDetail'
+import { QuoteEditor } from '../src/features/quotes/QuoteEditor'
 
 import { App } from '../src/app/App'
 import { calculateQuote, validateQuoteDraft } from '../src/features/quotes/quoteCalculations'
@@ -32,6 +34,24 @@ function quoteInput(overrides: Partial<QuoteCreateInput> = {}): QuoteCreateInput
 }
 
 describe('quotation and inquiry Mock API', () => {
+  it('matches server inquiry transitions and keeps audit history when reopening', async () => {
+    const api = new MockSalesApi()
+    let row = (await api.listInquiries())[0]
+    expect(row.status).toBe('responding')
+    await expect(api.changeInquiryStatus(row.id, 'closed', '종료', row.version)).rejects.toMatchObject({ status: 422 })
+    row = await api.changeInquiryStatus(row.id, 'quoting', undefined, row.version)
+    row = await api.assignInquiry(row.id, row.ownerId, row.version)
+    expect(row.status).toBe('quoting')
+    row = await api.changeInquiryStatus(row.id, 'answered', undefined, row.version)
+    await expect(api.changeInquiryStatus(row.id, 'closed', '', row.version)).rejects.toMatchObject({ status: 422 })
+    row = await api.changeInquiryStatus(row.id, 'closed', '고객 확인', row.version)
+    await expect(api.assignInquiry(row.id, row.ownerId, row.version)).rejects.toMatchObject({ status: 422 })
+    await expect(api.changeInquiryStatus(row.id, 'received', undefined, row.version)).rejects.toMatchObject({ status: 422 })
+    row = await api.changeInquiryStatus(row.id, 'responding', '추가 문의', row.version)
+    expect(row.resultMemo).toBe('고객 확인')
+    expect(row.activities.at(-1)?.body).toContain('추가 문의')
+  })
+
   it('renders manager dashboard and member-owned records', async () => {
     const managerApi = new MockSalesApi()
     const memberApi = new MockSalesApi({ currentUser: member })
@@ -75,7 +95,11 @@ describe('quotation and inquiry Mock API', () => {
     const managerQuote = await managerApi.createQuote(quoteInput())
     const managerSubmitted = await managerApi.submitQuoteRevision(managerQuote.id, managerQuote.currentRevision.id, managerQuote.currentRevision.version)
     const approved = await managerApi.approveQuoteRevision(managerQuote.id, managerSubmitted.id, managerSubmitted.version)
+    const versionBeforePdf = managerQuote.version
     expect(await managerApi.downloadQuotePdf(managerQuote.id, approved.id, 'en')).toBeInstanceOf(Blob)
+    const afterPdf = await managerApi.getQuote(managerQuote.id)
+    expect(afterPdf.version).toBe(versionBeforePdf + 3)
+    expect(afterPdf.currentRevision.dispatches.at(-1)).toMatchObject({ language: 'en', memo: 'PDF 생성' })
   })
 
   it('creates Rev.1 from approved Rev.0', async () => {
@@ -105,6 +129,108 @@ describe('quotation and inquiry Mock API', () => {
 })
 
 describe('quotation and inquiry workspace', () => {
+  it('rounds each line before showing the KRW quote total', async () => {
+    const api = new MockSalesApi()
+    const quote = await api.createQuote(quoteInput({
+      inquiryId: undefined, discountAmount: 0, shippingAmount: 0,
+      lines: [
+        { productId: 'p1', description: 'A', quantity: 1, unitPrice: 0.5 },
+        { productId: 'p2', description: 'B', quantity: 1, unitPrice: 0.5 },
+      ],
+    }))
+    const noop = vi.fn()
+    render(<QuoteEditor quote={quote} user={member} incoterms={[]} products={[]} busy={false} onSave={noop} onSubmit={noop} onApprove={noop} onReject={noop} onNewRevision={noop} onPdf={noop} onDispatch={noop} onResult={noop} />)
+
+    expect(screen.getByText('KRW 2')).toBeVisible()
+  })
+
+  it('matches backend decimal rounding for USD midpoint values', async () => {
+    const api = new MockSalesApi()
+    const quote = await api.createQuote(quoteInput({ currency: 'USD', taxType: 'exempt', discountAmount: 0, shippingAmount: 0, lines: [{ productId: 'p1', description: 'A', quantity: 7, unitPrice: 1.005 }] }))
+    const noop = vi.fn()
+    render(<QuoteEditor quote={quote} user={member} incoterms={[]} products={[]} busy={false} onSave={noop} onSubmit={noop} onApprove={noop} onReject={noop} onNewRevision={noop} onPdf={noop} onDispatch={noop} onResult={noop} />)
+
+    expect(screen.getByText('USD 7.04')).toBeVisible()
+  })
+
+  it('matches backend decimal accumulation before applying a discount', async () => {
+    const api = new MockSalesApi()
+    const quote = await api.createQuote(quoteInput({ currency: 'USD', taxType: 'exempt', discountAmount: 0.005, shippingAmount: 0, lines: [
+      { productId: 'p1', description: 'A', quantity: 1, unitPrice: 0.1 },
+      { productId: 'p2', description: 'B', quantity: 1, unitPrice: 0.7 },
+    ] }))
+    const noop = vi.fn()
+    render(<QuoteEditor quote={quote} user={member} incoterms={[]} products={[]} busy={false} onSave={noop} onSubmit={noop} onApprove={noop} onReject={noop} onNewRevision={noop} onPdf={noop} onDispatch={noop} onResult={noop} />)
+
+    expect(screen.getByText('USD 0.8')).toBeVisible()
+  })
+
+  it('lets the salesperson edit the quote validity date', async () => {
+    const api = new MockSalesApi()
+    const quote = await api.createQuote(quoteInput({ validUntil: '2026-12-31' }))
+    const noop = vi.fn()
+    render(<QuoteEditor quote={quote} user={member} incoterms={[]} products={[]} busy={false} onSave={noop} onSubmit={noop} onApprove={noop} onReject={noop} onNewRevision={noop} onPdf={noop} onDispatch={noop} onResult={noop} />)
+
+    expect(screen.getByLabelText('유효기간')).toHaveValue('2026-12-31')
+  })
+
+  it('refreshes the aggregate version after PDF generation before creating a revision', async () => {
+    Object.defineProperty(URL, 'createObjectURL', { configurable: true, value: vi.fn(() => 'blob:test') })
+    Object.defineProperty(URL, 'revokeObjectURL', { configurable: true, value: vi.fn() })
+    vi.spyOn(HTMLAnchorElement.prototype, 'click').mockImplementation(() => {})
+    const api = new MockSalesApi()
+    const quote = await api.createQuote(quoteInput({ inquiryId: undefined }))
+    const submitted = await api.submitQuoteRevision(quote.id, quote.currentRevision.id, quote.currentRevision.version)
+    await api.approveQuoteRevision(quote.id, submitted.id, submitted.version)
+    window.history.pushState({}, '', '/quotes')
+    render(<App api={api} />)
+    fireEvent.click(await screen.findByRole('button', { name: new RegExp(quote.quoteNumber) }))
+    fireEvent.click(await screen.findByRole('button', { name: '국문 PDF' }))
+    await waitFor(() => expect(screen.getByRole('button', { name: '새 개정 만들기' })).toBeEnabled())
+    fireEvent.click(screen.getByRole('button', { name: '새 개정 만들기' }))
+
+    expect((await screen.findAllByText(/Rev\.1/)).length).toBeGreaterThan(0)
+  })
+
+  it('shows each inquiry attachment as a download action', async () => {
+    const row = (await new MockSalesApi().listInquiries())[0]
+    render(<InquiryDetail row={{ ...row, attachments: [{ id: 'a1', inquiryId: row.id, fileName: 'spec.pdf', contentType: 'application/pdf', size: 12, uploadedBy: member.id, uploadedAt: '2026-10-10T00:00:00Z' }] }} onAddActivity={() => {}} onChangeStatus={() => {}} onUpload={() => {}} onCreateQuote={() => {}} />)
+
+    expect(screen.getByRole('button', { name: 'spec.pdf 다운로드' })).toBeVisible()
+  })
+
+  it('adds and removes draft lines, recalculates totals, and saves the edited list', async () => {
+    const api = new MockSalesApi()
+    const products = await api.listProducts()
+    window.history.pushState({}, '', '/quotes')
+    render(<App api={api} />)
+    fireEvent.click(await screen.findByRole('button', { name: /SWK-202610-002/ }))
+    fireEvent.change(screen.getByRole('combobox', { name: '추가할 품목' }), { target: { value: products[0].id } })
+    fireEvent.click(screen.getByRole('button', { name: '품목 추가' }))
+    const amounts = screen.getAllByRole('spinbutton', { name: `${products[0].name} 단가` })
+    fireEvent.change(amounts[1], { target: { value: '50' } })
+    expect(screen.getByText('USD 300')).toBeVisible()
+    fireEvent.click(screen.getAllByRole('button', { name: /품목 삭제/ })[0])
+    expect(screen.getByText('USD 50')).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: '견적 저장' }))
+    await screen.findByRole('button', { name: /SWK-202610-002.*USD 50/ })
+    const stored = await api.getQuote('quote-seed-2')
+    expect(stored.currentRevision.lines).toHaveLength(1)
+    expect(stored.currentRevision.lines[0]).toMatchObject({ productId: products[0].id, quantity: 1, unitPrice: 50 })
+    fireEvent.click(screen.getByRole('button', { name: /품목 삭제/ }))
+    expect(screen.getByRole('button', { name: '견적 저장' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: '승인 요청' })).toBeDisabled()
+  })
+
+  it('passes the closing memo from the inquiry form to its status action', async () => {
+    const row = (await new MockSalesApi().listInquiries())[0]
+    const change = vi.fn()
+    render(<InquiryDetail row={{ ...row, status: 'answered' }} onAddActivity={() => {}} onChangeStatus={change} onUpload={() => {}} onCreateQuote={() => {}} />)
+    fireEvent.change(screen.getByRole('textbox', { name: '상태 변경 메모' }), { target: { value: '답변 완료 확인' } })
+    fireEvent.change(screen.getByRole('combobox', { name: '문의 상태' }), { target: { value: 'closed' } })
+    expect(change).toHaveBeenCalledWith('closed', '답변 완료 확인')
+  })
+
   it('renders the three tabs, dashboard alerts, manager approval, and approved revision lock', async () => {
     const api = new MockSalesApi()
     const pending = await api.getQuote('quote-seed-1')

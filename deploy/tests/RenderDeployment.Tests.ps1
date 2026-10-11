@@ -61,6 +61,17 @@ Assert-True ($dockerfile -match '(?m)^FROM mcr\.microsoft\.com/dotnet/sdk:10\.0 
 Assert-True ($dockerfile -match '(?m)^FROM mcr\.microsoft\.com/dotnet/aspnet:10\.0 AS runtime\s*$') 'Dockerfile must use the published ASP.NET 10 runtime tag.'
 Assert-True ($dockerfile -notmatch 'dotnet/(?:sdk|aspnet):10\.0-bookworm-slim') 'Dockerfile references an unavailable .NET 10 bookworm-slim tag.'
 Assert-True ($dockerfile -match '\blibgssapi-krb5-2\b') 'Runtime image must include the GSSAPI library required by Npgsql probing.'
+Assert-True ($dockerfile -match '\bfonts-nanum\b') 'Build and runtime images must include the standalone Korean TTF font package.'
+$programPath = Join-Path $repoRoot 'src\backend\SalesManagement.Api\Program.cs'
+$projectPath = Join-Path $repoRoot 'src\backend\SalesManagement.Api\SalesManagement.Api.csproj'
+$migration = @(Get-ChildItem (Join-Path $repoRoot 'src\backend\SalesManagement.Postgres\Migrations\*_AddQuotationInquiry.cs'))
+$frontendApp = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'src\frontend\src\app\App.tsx')
+$apiProject = Get-Content -Raw -LiteralPath $projectPath
+$runbook = Get-Content -Raw -LiteralPath (Join-Path $repoRoot 'deploy\runbook.md')
+Assert-True ($frontendApp -match 'path="/quotes"') 'Quotation route is missing.'
+Assert-True ($apiProject -match 'PDFsharp-MigraDoc') 'Approved PDF package is missing.'
+Assert-True ($migration.Count -eq 1) 'Quotation database migration is missing or duplicated.'
+Assert-True ($runbook -match '10MB' -and $runbook -match 'AddQuotationInquiry') 'Attachment limit and quotation rollback guidance are missing.'
 
 $render = Get-Command render -ErrorAction SilentlyContinue
 if ($render) {

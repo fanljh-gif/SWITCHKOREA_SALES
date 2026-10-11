@@ -572,6 +572,10 @@ namespace SalesManagement.Postgres.Migrations
                     b.Property<Guid>("InquiryId")
                         .HasColumnType("uuid");
 
+                    b.Property<string>("Sha256")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
                     b.Property<long>("Size")
                         .HasColumnType("bigint");
 
@@ -1354,6 +1358,10 @@ namespace SalesManagement.Postgres.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("DeliveryTerms")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<decimal>("DiscountAmount")
                         .HasPrecision(20, 4)
                         .HasColumnType("numeric(20,4)");
@@ -1364,9 +1372,17 @@ namespace SalesManagement.Postgres.Migrations
                     b.Property<string>("NamedPlace")
                         .HasColumnType("text");
 
+                    b.Property<string>("Notes")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
                     b.Property<decimal>("OtherAmount")
                         .HasPrecision(20, 4)
                         .HasColumnType("numeric(20,4)");
+
+                    b.Property<string>("PaymentTerms")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<Guid>("QuoteId")
                         .HasColumnType("uuid");
