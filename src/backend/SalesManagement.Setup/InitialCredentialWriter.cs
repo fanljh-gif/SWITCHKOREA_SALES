@@ -81,9 +81,10 @@ public sealed class InitialCredentialWriter
 
     private void EnsureSecureDirectory(string directory)
     {
+        var rootExisted = Directory.Exists(allowedRoot);
         Directory.CreateDirectory(allowedRoot);
         RejectReparsePoint(allowedRoot);
-        if (!OperatingSystem.IsWindows())
+        if (!OperatingSystem.IsWindows() && !rootExisted)
             File.SetUnixFileMode(allowedRoot, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
 
         var relative = Path.GetRelativePath(allowedRoot, directory);
@@ -94,10 +95,12 @@ public sealed class InitialCredentialWriter
             if (Directory.Exists(current))
                 RejectReparsePoint(current);
             else
+            {
                 Directory.CreateDirectory(current);
+                if (!OperatingSystem.IsWindows())
+                    File.SetUnixFileMode(current, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
+            }
             RejectReparsePoint(current);
-            if (!OperatingSystem.IsWindows())
-                File.SetUnixFileMode(current, UnixFileMode.UserRead | UnixFileMode.UserWrite | UnixFileMode.UserExecute);
         }
     }
 

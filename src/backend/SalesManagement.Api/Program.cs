@@ -37,6 +37,8 @@ builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(AuthOptions.Default);
 builder.Services.AddScoped<AuthService>();
+builder.Services.AddSingleton(new OneTimePasswordResetOptions("ADCAD8569370C6FB86F9F2943591D1650A18411A9676F678ABCAA952F8AED739"));
+builder.Services.AddScoped<OneTimePasswordResetGate>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
 builder.Services.AddScoped<PriceService>();
@@ -97,6 +99,7 @@ app.MapHealthChecks("/health/ready", new HealthCheckOptions
     Predicate = registration => registration.Tags.Contains("ready"),
 });
 app.MapAuthEndpoints();
+app.MapOneTimePasswordResetEndpoints();
 app.MapMasterDataEndpoints();
 app.MapShipmentEndpoints();
 app.MapRateTargetEndpoints();
