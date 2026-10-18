@@ -36,8 +36,6 @@ builder.Services.AddSalesProductionRuntime(builder.Configuration, builder.Enviro
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(AuthOptions.Default);
-builder.Services.AddSingleton(new OneTimePasswordResetOptions("013CFFA146083B5F9B1EC587D5D086BD2BF30570E1D86BC5D2042E28216C1E82"));
-builder.Services.AddScoped<OneTimePasswordResetGate>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
@@ -110,7 +108,6 @@ app.MapResearchEndpoints();
 app.MapInquiryEndpoints();
 app.MapQuoteEndpoints();
 app.MapIncotermEndpoints();
-app.MapOneTimePasswordResetEndpoints();
 app.MapFallbackToFile("index.html");
 app.Run();
 
