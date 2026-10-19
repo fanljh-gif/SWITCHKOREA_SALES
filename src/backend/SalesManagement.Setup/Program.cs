@@ -71,14 +71,7 @@ if (resetLogin is not null && resetHash is not null)
     return;
 }
 
-InitialAccountDefinition[] accounts =
-[
-    new("jhlee", "이재학", "jhlee@switchkorea.com", Role.Manager),
-    new("twpark", "박태원", "ptw0517@switchkorea.com", Role.Member),
-    new("mcchoi", "최명철", "cmc@switchkorea.com", Role.Member),
-    new("sylee", "이소연", "sylee@switchkorea.com", Role.Member),
-    new("cslee", "이창선", "cslee@switchkorea.com", Role.Member),
-];
+var accounts = InitialAccountCatalog.All;
 
 var result = await scope.ServiceProvider.GetRequiredService<InitialAccountSeeder>().SeedAsync(accounts);
 if (result.Created.Count > 0)
