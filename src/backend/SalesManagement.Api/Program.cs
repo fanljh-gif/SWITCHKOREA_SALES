@@ -36,10 +36,6 @@ builder.Services.AddSalesProductionRuntime(builder.Configuration, builder.Enviro
 builder.Services.AddSingleton<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton(AuthOptions.Default);
-builder.Services.AddSingleton(new OneTimeTeamProvisioningOptions(
-    "960AD5C527248D6C72481E10CF72BD38C148B1738D8C61E989DE688E9C6D70F2",
-    Guid.Parse("54de9583-6583-4fe3-8933-5434baf7ecd0")));
-builder.Services.AddScoped<OneTimeTeamProvisioningGate>();
 builder.Services.AddScoped<AuthService>();
 builder.Services.AddScoped<CustomerService>();
 builder.Services.AddScoped<ProductService>();
@@ -112,7 +108,6 @@ app.MapResearchEndpoints();
 app.MapInquiryEndpoints();
 app.MapQuoteEndpoints();
 app.MapIncotermEndpoints();
-app.MapOneTimeTeamProvisioningEndpoints();
 app.MapFallbackToFile("index.html");
 app.Run();
 
